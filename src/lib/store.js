@@ -7,17 +7,17 @@ export const CRM_STATUSES = [
 ];
 
 export const STATUS_COLORS = {
-  'New': '#00d4ff',
-  'Contacted': '#7c3aed',
+  'New': '#6366f1',
+  'Contacted': '#8b5cf6',
   'Replied': '#f59e0b',
-  'Interested': '#10b981',
+  'Interested': '#22c55e',
   'Not Interested': '#ef4444',
   'Follow-up': '#f97316',
-  'Closed Won': '#22c55e',
+  'Closed Won': '#16a34a',
   'Closed Lost': '#6b7280'
 };
 
-export const BRAND_QUALITY = { low: '#ef4444', medium: '#f59e0b', high: '#10b981' };
+export const BRAND_QUALITY = { low: '#ef4444', medium: '#f59e0b', high: '#22c55e' };
 
 let leads = [];
 let messages = [];

@@ -97,7 +97,7 @@ export default function Dashboard({ onNavigate }) {
                 <ResponsiveContainer width="100%" height={150}>
                   <PieChart>
                     <Pie data={sourceData} cx="50%" cy="50%" outerRadius={60} dataKey="value">
-                      {sourceData.map((_, i) => <Cell key={i} fill={['#00d4ff', '#7c3aed', '#10b981', '#f59e0b'][i % 4]} />)}
+                      {sourceData.map((_, i) => <Cell key={i} fill={['#6366f1', '#7c3aed', '#10b981', '#f59e0b'][i % 4]} />)}
                     </Pie>
                     <Tooltip content={<CustomTooltip />} />
                   </PieChart>
@@ -105,7 +105,7 @@ export default function Dashboard({ onNavigate }) {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
                   {sourceData.map((s, i) => (
                     <div key={s.name} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11 }}>
-                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: ['#00d4ff', '#7c3aed', '#10b981', '#f59e0b'][i % 4] }} />
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: ['#6366f1', '#7c3aed', '#10b981', '#f59e0b'][i % 4] }} />
                       <span style={{ color: 'var(--text-secondary)' }}>{s.name}</span>
                       <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{s.value}</span>
                     </div>
@@ -128,7 +128,7 @@ export default function Dashboard({ onNavigate }) {
               : stats.recentActivity.map(lead => (
                 <div key={lead.id} onClick={() => onNavigate('leads', lead)}
                   style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 8, background: 'var(--bg-surface)', border: '1px solid var(--border)', cursor: 'pointer', marginBottom: 8, transition: 'border-color 0.15s' }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(0,212,255,0.3)'}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(99,102,241,0.3)'}
                   onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
                 >
                   <div style={{ width: 32, height: 32, borderRadius: 8, background: `${STATUS_COLORS[lead.status]}15`, border: `1px solid ${STATUS_COLORS[lead.status]}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: STATUS_COLORS[lead.status] }}>
@@ -163,10 +163,10 @@ export default function Dashboard({ onNavigate }) {
               ))}
             </Card>
 
-            <Card style={{ background: 'linear-gradient(135deg, rgba(0,212,255,0.05), rgba(124,58,237,0.05))' }}>
+            <Card style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.05), rgba(124,58,237,0.05))' }}>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 14 }}>Outreach Channels</div>
               {[
-                { label: 'Email', icon: Mail, count: db.getAllMessages().filter(m => m.type === 'email').length, color: '#00d4ff' },
+                { label: 'Email', icon: Mail, count: db.getAllMessages().filter(m => m.type === 'email').length, color: '#6366f1' },
                 { label: 'WhatsApp', icon: MessageSquare, count: db.getAllMessages().filter(m => m.type === 'whatsapp').length, color: '#10b981' },
               ].map(({ label, icon: Icon, count, color }) => (
                 <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>

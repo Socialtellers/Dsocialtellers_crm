@@ -1,34 +1,39 @@
 :root {
-  --bg-base: #080c14;
-  --bg-surface: #0d1320;
-  --bg-card: #111827;
-  --bg-hover: #1a2235;
-  --bg-input: #0f1a2a;
+  /* Backgrounds — deep neutral slate */
+  --bg-base: #0a0a0f;
+  --bg-surface: #12121a;
+  --bg-card: #16161f;
+  --bg-hover: #1e1e2a;
+  --bg-input: #1a1a24;
 
-  --border: #1e2d45;
-  --border-bright: #2a3f5f;
+  /* Borders */
+  --border: #26262f;
+  --border-bright: #383844;
 
-  --accent-primary: #00d4ff;
-  --accent-glow: rgba(0, 212, 255, 0.15);
-  --accent-secondary: #7c3aed;
-  --accent-green: #10b981;
+  /* Accent — refined indigo/violet */
+  --accent-primary: #6366f1;
+  --accent-glow: rgba(99, 102, 241, 0.15);
+  --accent-secondary: #8b5cf6;
+  --accent-green: #22c55e;
   --accent-amber: #f59e0b;
   --accent-red: #ef4444;
 
-  --text-primary: #e8f4fd;
-  --text-secondary: #7a99bb;
-  --text-muted: #3d5470;
-  --text-accent: #00d4ff;
+  /* Text */
+  --text-primary: #f4f4f6;
+  --text-secondary: #9494a8;
+  --text-muted: #56566a;
+  --text-accent: #818cf8;
 
-  --font-display: 'Syne', sans-serif;
-  --font-body: 'DM Sans', sans-serif;
-  --font-mono: 'DM Mono', monospace;
+  /* Typography — professional, clean */
+  --font-display: 'Inter', -apple-system, sans-serif;
+  --font-body: 'Inter', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
 
   --radius: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
-  --shadow-card: 0 4px 24px rgba(0,0,0,0.4);
-  --shadow-glow: 0 0 30px rgba(0, 212, 255, 0.12);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.2);
+  --shadow-glow: 0 0 0 1px rgba(99,102,241,0.1), 0 8px 32px rgba(99,102,241,0.08);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -39,6 +44,7 @@ html, body, #root {
   background: var(--bg-base);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
 }
 
 ::-webkit-scrollbar { width: 4px; }
@@ -56,8 +62,8 @@ a { text-decoration: none; color: inherit; }
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 10px rgba(0,212,255,0.2); }
-  50% { box-shadow: 0 0 25px rgba(0,212,255,0.5); }
+  0%, 100% { box-shadow: 0 0 10px rgba(99,102,241,0.2); }
+  50% { box-shadow: 0 0 25px rgba(99,102,241,0.5); }
 }
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }

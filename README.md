@@ -1,5 +1,5 @@
 # AI Lead Intelligence & Outreach OS
-### Built for Dstorytellers — Dubai's AI-Powered Marketing Agency
+### Built for Dsocialtellers — Dubai's AI-Powered Marketing Agency
 
 A full-stack SaaS platform that automates lead generation, AI research, personalized outreach, and CRM management for marketing agencies.
 

@@ -75,7 +75,7 @@ Output JSON:
 
 // ─── AGENT 3: Personalization Strategy ─────────────────────────────
 export async function runStrategyAgent(lead, research) {
-  const system = `You are a B2B sales strategist for a digital marketing agency called Dstorytellers, based in Dubai.
+  const system = `You are a B2B sales strategist for a digital marketing agency called Dsocialtellers, based in Dubai.
 You create outreach strategies based on business research. Output ONLY valid JSON.`;
 
   const user = `Create an outreach strategy for this lead:
@@ -99,7 +99,7 @@ Output JSON:
 
 // ─── AGENT 4: Copywriting ──────────────────────────────────────────
 export async function runCopywritingAgent(lead, research, strategy) {
-  const system = `You are an expert B2B copywriter for Dstorytellers, a Dubai-based digital marketing agency.
+  const system = `You are an expert B2B copywriter for Dsocialtellers, a Dubai-based digital marketing agency.
 You write highly personalized cold outreach that references real business observations.
 Rules: No generic sales language. Reference specific weaknesses. Email max 150 words. WhatsApp casual & short.
 Output ONLY valid JSON.`;

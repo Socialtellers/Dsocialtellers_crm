@@ -52,13 +52,13 @@ export default function OutreachPage({ selectedLead, onNavigate }) {
               style={{
                 padding: '10px 12px', borderRadius: 8, marginBottom: 6, cursor: 'pointer',
                 background: activeLead?.id === lead.id ? 'var(--accent-glow)' : 'var(--bg-card)',
-                border: `1px solid ${activeLead?.id === lead.id ? 'rgba(0,212,255,0.3)' : 'var(--border)'}`,
+                border: `1px solid ${activeLead?.id === lead.id ? 'rgba(99,102,241,0.3)' : 'var(--border)'}`,
                 transition: 'all 0.15s'
               }}
             >
               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>{lead.name}</div>
               <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                {lead.email_body && <span style={{ fontSize: 9, color: '#00d4ff', background: 'rgba(0,212,255,0.08)', padding: '2px 6px', borderRadius: 4, fontFamily: 'var(--font-mono)' }}>✉ Email</span>}
+                {lead.email_body && <span style={{ fontSize: 9, color: '#6366f1', background: 'rgba(99,102,241,0.08)', padding: '2px 6px', borderRadius: 4, fontFamily: 'var(--font-mono)' }}>✉ Email</span>}
                 {lead.whatsapp_message && <span style={{ fontSize: 9, color: '#10b981', background: 'rgba(16,185,129,0.08)', padding: '2px 6px', borderRadius: 4, fontFamily: 'var(--font-mono)' }}>💬 WhatsApp</span>}
               </div>
               <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>{lead.category} · {lead.location}</div>
@@ -85,8 +85,8 @@ export default function OutreachPage({ selectedLead, onNavigate }) {
               <Card>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(0,212,255,0.1)', border: '1px solid rgba(0,212,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Mail size={13} color="#00d4ff" />
+                    <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Mail size={13} color="#6366f1" />
                     </div>
                     <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Cold Email</span>
                   </div>
@@ -163,10 +163,10 @@ export default function OutreachPage({ selectedLead, onNavigate }) {
                   }}>
                     <div style={{
                       width: 28, height: 28, borderRadius: 6, flexShrink: 0,
-                      background: m.direction === 'inbound' ? 'rgba(16,185,129,0.1)' : 'rgba(0,212,255,0.08)',
+                      background: m.direction === 'inbound' ? 'rgba(16,185,129,0.1)' : 'rgba(99,102,241,0.08)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center'
                     }}>
-                      {m.type === 'email' ? <Mail size={11} color={m.direction === 'inbound' ? '#10b981' : '#00d4ff'} /> : <MessageSquare size={11} color={m.direction === 'inbound' ? '#10b981' : '#00d4ff'} />}
+                      {m.type === 'email' ? <Mail size={11} color={m.direction === 'inbound' ? '#10b981' : '#6366f1'} /> : <MessageSquare size={11} color={m.direction === 'inbound' ? '#10b981' : '#6366f1'} />}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       {m.subject && <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>{m.subject}</div>}

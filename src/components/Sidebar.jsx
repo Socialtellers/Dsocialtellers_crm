@@ -29,8 +29,8 @@ export default function Sidebar({ currentPage, onNavigate }) {
             <Zap size={16} color="#fff" fill="#fff" />
           </div>
           <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
-              Dstorytellers
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
+              Dsocialtellers
             </div>
             <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginTop: 1 }}>
               AI Outreach OS
@@ -54,7 +54,7 @@ export default function Sidebar({ currentPage, onNavigate }) {
                 width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                 padding: '9px 12px', borderRadius: 7, marginBottom: 2,
                 background: active ? 'var(--accent-glow)' : 'transparent',
-                border: active ? '1px solid rgba(0,212,255,0.2)' : '1px solid transparent',
+                border: active ? '1px solid rgba(99,102,241,0.2)' : '1px solid transparent',
                 color: active ? 'var(--accent-primary)' : 'var(--text-secondary)',
                 fontSize: 13, fontWeight: active ? 600 : 400,
                 cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left'
@@ -74,8 +74,8 @@ export default function Sidebar({ currentPage, onNavigate }) {
       <div style={{ padding: '12px 10px', borderTop: '1px solid var(--border)' }}>
         <div style={{
           padding: '10px 12px', borderRadius: 8,
-          background: 'linear-gradient(135deg, rgba(0,212,255,0.08), rgba(124,58,237,0.08))',
-          border: '1px solid rgba(0,212,255,0.1)'
+          background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(124,58,237,0.08))',
+          border: '1px solid rgba(99,102,241,0.1)'
         }}>
           <div style={{ fontSize: 11, color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)', marginBottom: 4 }}>
             ● SYSTEM ONLINE
