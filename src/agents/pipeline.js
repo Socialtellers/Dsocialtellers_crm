@@ -1,11 +1,9 @@
-// AI Agent Service - connects to Anthropic API
-// Keys are loaded from .env file (never commit .env to GitHub)
-const CLAUDE_API = 'https://api.anthropic.com/v1/messages';
-const API_KEY = import.meta.env.VITE_CLAUDE_API_KEY;
-const APIFY_API = import.meta.env.VITE_APIFY_API_KEY;
+// AI Agent Service - calls our local backend proxy (server/index.js)
+// Backend talks to Claude API and Apify — avoids CORS issues
+const BACKEND = 'http://localhost:3001';
 
 async function callClaude(systemPrompt, userMessage, maxTokens = 1000) {
-  const response = await fetch(CLAUDE_API, {
+  const response = await fetch(`${BACKEND}/api/claude`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -15,10 +13,9 @@ async function callClaude(systemPrompt, userMessage, maxTokens = 1000) {
       messages: [{ role: 'user', content: userMessage }]
     })
   });
-  if (!response.ok) throw new Error(`Claude API error: ${response.status}`);
+  if (!response.ok) throw new Error(`Backend error: ${response.status} — is the server running? Run: npm run server`);
   const data = await response.json();
   const text = data.content.map(c => c.text || '').join('');
-  // Strip JSON fences
   return text.replace(/```json\n?|\n?```/g, '').trim();
 }
 
@@ -39,7 +36,7 @@ Output JSON:
 {
   "valid": boolean,
   "reason": string,
-  "clean_data": object (cleaned/normalized lead data)
+  "clean_data": object
 }`;
 
   const result = await callClaude(system, user);
@@ -61,8 +58,6 @@ Website: ${lead.website || 'None'}
 Instagram: ${lead.instagram || 'None'}
 Phone: ${lead.phone || 'None'}
 Source: ${lead.source}
-
-Based on the business type and available digital presence, generate a realistic analysis.
 
 Output JSON:
 {
@@ -132,7 +127,7 @@ Output JSON:
 // ─── AGENT 5: CRM Update ───────────────────────────────────────────
 export async function runCRMAgent(lead, action, notes = '') {
   const system = `You are a CRM management agent. Output ONLY valid JSON.`;
-  
+
   const user = `Update CRM record:
 Lead: ${lead.name}
 Action taken: ${action}
@@ -143,7 +138,7 @@ Output JSON:
 {
   "status": "appropriate CRM status",
   "notes": "updated notes",
-  "last_action": "today's date ISO format",
+  "last_action": "${new Date().toISOString().split('T')[0]}",
   "tags": ["relevant", "tags"]
 }`;
 
@@ -153,75 +148,38 @@ Output JSON:
 
 // ─── FULL PIPELINE ─────────────────────────────────────────────────
 export async function runFullPipeline(lead, onProgress) {
-  const steps = [
-    { name: 'Validation', pct: 15 },
-    { name: 'Business Research', pct: 40 },
-    { name: 'Strategy', pct: 60 },
-    { name: 'Copywriting', pct: 80 },
-    { name: 'CRM Update', pct: 100 },
-  ];
-
   onProgress?.({ step: 'Starting pipeline...', pct: 0 });
 
-  // Step 1: Validate
   onProgress?.({ step: 'Validating lead data...', pct: 10 });
   const validation = await runValidationAgent(lead);
   if (!validation.valid) throw new Error(`Lead invalid: ${validation.reason}`);
   onProgress?.({ step: 'Validation passed ✓', pct: 15 });
 
-  // Step 2: Research
   onProgress?.({ step: 'Researching business...', pct: 20 });
   const research = await runResearchAgent(lead);
   onProgress?.({ step: 'Research complete ✓', pct: 40 });
 
-  // Step 3: Strategy
   onProgress?.({ step: 'Building outreach strategy...', pct: 45 });
   const strategy = await runStrategyAgent(lead, research);
   onProgress?.({ step: 'Strategy created ✓', pct: 60 });
 
-  // Step 4: Copy
   onProgress?.({ step: 'Writing personalized copy...', pct: 65 });
   const copy = await runCopywritingAgent(lead, research, strategy);
   onProgress?.({ step: 'Copy generated ✓', pct: 80 });
 
-  // Step 5: CRM
   onProgress?.({ step: 'Updating CRM...', pct: 85 });
   onProgress?.({ step: 'Pipeline complete ✓', pct: 100 });
 
   return { validation, research, strategy, copy };
 }
 
-// ─── APIFY SCRAPER (Mock for MVP) ──────────────────────────────────
+// ─── APIFY SCRAPER ─────────────────────────────────────────────────
 export async function scrapeLeads(query, location, source = 'Google Maps') {
-  // In production, this calls Apify actors for real scraping
-  // For MVP, we simulate with realistic data from Claude
-  const system = `You are a web scraping result simulator for a lead generation system.
-Generate realistic business lead data for Dubai/UAE businesses. Output ONLY valid JSON array.`;
-
-  const user = `Generate 3-5 realistic business leads for:
-Query: "${query}"
-Location: "${location}"
-Source: ${source}
-
-Output JSON array of leads:
-[{
-  "id": "unique_id",
-  "name": "Business Name",
-  "website": "https://...",
-  "instagram": "@handle or null",
-  "phone": "+971...",
-  "category": "category",
-  "location": "area, Dubai",
-  "source": "${source}",
-  "status": "New",
-  "brand_quality": null,
-  "score": null,
-  "notes": "Freshly scraped",
-  "last_action": "${new Date().toISOString().split('T')[0]}",
-  "tags": ["${query.split(' ')[0]}"],
-  "createdAt": "${new Date().toISOString().split('T')[0]}"
-}]`;
-
-  const result = await callClaude(system, user, 1000);
-  return parseJSON(result);
+  const response = await fetch(`${BACKEND}/api/scrape`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, location, source })
+  });
+  if (!response.ok) throw new Error(`Scrape error: ${response.status} — is the server running? Run: npm run server`);
+  return response.json();
 }
