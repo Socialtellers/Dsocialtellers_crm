@@ -86,9 +86,13 @@ async function scrapeGoogleMaps(query, location, limit = 5) {
 }
 
 async function scrapeInstagram(query, location, limit = 5) {
-  // Search for business accounts by hashtag — request more to get more unique accounts
-  const results = await runApifyActor('apify~instagram-hashtag-scraper', {
-    hashtags: [`${query}${location.replace(/\s/g, '')}`, `${query}dubai`, `${query}uae`],
+  // Instagram hashtag scraper needs "search" + "searchType" input format
+  const hashtag = `${query}${location}`.replace(/\s/g, '').toLowerCase();
+  const results = await runApifyActor('apify~instagram-scraper', {
+    search: hashtag,
+    searchType: 'hashtag',
+    searchLimit: 1,
+    resultsType: 'posts',
     resultsLimit: limit * 6,
   }, limit * 6);
   console.log(`  Instagram raw posts: ${results.length}`);
@@ -149,9 +153,12 @@ async function scrapeLinkedIn(query, location, limit = 5) {
 // ─── Claude fallback (when Apify actor fails) ──────────────────────
 async function claudeFallback(query, location, source, limit = 5) {
   console.log(`→ Using Claude fallback for ${source}`);
-  const text = await callClaude(
+  const safeLimit = Math.min(limit, 10); // cap to avoid token overflow
+  let text;
+  try {
+    text = await callClaude(
     'Generate realistic UAE business lead data. Output ONLY a valid JSON array. No markdown.',
-    `Generate ${limit} realistic "${query}" business leads in "${location}", UAE for source "${source}".
+    `Generate ${safeLimit} realistic "${query}" business leads in "${location}", UAE for source "${source}".
 Output ONLY this JSON array:
 [{
   "id": "s1",
@@ -169,9 +176,21 @@ Output ONLY this JSON array:
   "last_action": "${TODAY()}",
   "tags": ["${query}"],
   "createdAt": "${TODAY()}"
-}]`
-  );
-  return JSON.parse(text);
+}]`,
+      4000
+    );
+  } catch (e) {
+    console.error('  Claude call failed:', e.message);
+    throw new Error('Claude fallback failed: ' + e.message);
+  }
+  try {
+    // Extract JSON array even if wrapped in text
+    const match = text.match(/\[[\s\S]*\]/);
+    return JSON.parse(match ? match[0] : text);
+  } catch (e) {
+    console.error('  JSON parse failed. Raw:', text.slice(0, 200));
+    throw new Error('Could not parse leads from Claude response');
+  }
 }
 
 // ─── Scrape endpoint ───────────────────────────────────────────────
