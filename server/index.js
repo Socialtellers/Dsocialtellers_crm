@@ -40,10 +40,10 @@ async function callClaude(system, userMsg, maxTokens = 1000) {
 }
 
 // ─── Apify caller ──────────────────────────────────────────────────
-async function runApifyActor(actorId, input) {
-  console.log(`→ Running Apify actor: ${actorId}`);
+async function runApifyActor(actorId, input, limit = 5) {
+  console.log(`→ Running Apify actor: ${actorId} (limit ${limit})`);
   const res = await fetch(
-    `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?token=${APIFY_KEY}&maxItems=5`,
+    `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?token=${APIFY_KEY}&maxItems=${limit}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -59,12 +59,12 @@ async function runApifyActor(actorId, input) {
 
 // ─── Platform scrapers ─────────────────────────────────────────────
 
-async function scrapeGoogleMaps(query, location) {
+async function scrapeGoogleMaps(query, location, limit = 5) {
   const results = await runApifyActor('compass~crawler-google-places', {
     searchStringsArray: [`${query} in ${location}`],
-    maxCrawledPlacesPerSearch: 5,
+    maxCrawledPlacesPerSearch: limit,
     language: 'en',
-  });
+  }, limit);
 
   return results.map((p, i) => ({
     id: `gmap_${Date.now()}_${i}`,
@@ -85,12 +85,12 @@ async function scrapeGoogleMaps(query, location) {
   }));
 }
 
-async function scrapeInstagram(query, location) {
+async function scrapeInstagram(query, location, limit = 5) {
   // Search for business accounts by hashtag — request more to get more unique accounts
   const results = await runApifyActor('apify~instagram-hashtag-scraper', {
     hashtags: [`${query}${location.replace(/\s/g, '')}`, `${query}dubai`, `${query}uae`],
-    resultsLimit: 30,
-  });
+    resultsLimit: limit * 6,
+  }, limit * 6);
   console.log(`  Instagram raw posts: ${results.length}`);
 
   // Extract unique accounts from posts
@@ -116,16 +116,16 @@ async function scrapeInstagram(query, location) {
       tags: [query, 'Instagram'],
       createdAt: TODAY()
     });
-    if (leads.length >= 5) break;
+    if (leads.length >= limit) break;
   }
   return leads;
 }
 
-async function scrapeLinkedIn(query, location) {
+async function scrapeLinkedIn(query, location, limit = 5) {
   const results = await runApifyActor('curious_coder~linkedin-company-search-scraper', {
     keywords: `${query} ${location}`,
-    maxResults: 5,
-  });
+    maxResults: limit,
+  }, limit);
 
   return results.map((c, i) => ({
     id: `li_${Date.now()}_${i}`,
@@ -147,11 +147,11 @@ async function scrapeLinkedIn(query, location) {
 }
 
 // ─── Claude fallback (when Apify actor fails) ──────────────────────
-async function claudeFallback(query, location, source) {
+async function claudeFallback(query, location, source, limit = 5) {
   console.log(`→ Using Claude fallback for ${source}`);
   const text = await callClaude(
     'Generate realistic UAE business lead data. Output ONLY a valid JSON array. No markdown.',
-    `Generate 4 realistic "${query}" business leads in "${location}", UAE for source "${source}".
+    `Generate ${limit} realistic "${query}" business leads in "${location}", UAE for source "${source}".
 Output ONLY this JSON array:
 [{
   "id": "s1",
@@ -176,7 +176,7 @@ Output ONLY this JSON array:
 
 // ─── Scrape endpoint ───────────────────────────────────────────────
 app.post('/api/scrape', async (req, res) => {
-  const { query, location, source } = req.body;
+  const { query, location, source, limit = 5 } = req.body;
   console.log(`\n→ Scraping "${query}" in "${location}" via ${source}`);
 
   try {
@@ -187,31 +187,31 @@ app.post('/api/scrape', async (req, res) => {
     // Try real Apify actor first, fall back to Claude simulation
     if (APIFY_KEY && source === 'Google Maps') {
       try {
-        leads = await scrapeGoogleMaps(query, location);
+        leads = await scrapeGoogleMaps(query, location, limit);
         console.log(`✓ Google Maps: ${leads.length} leads`);
       } catch (e) {
         console.log(`⚠ Google Maps failed (${e.message.slice(0,80)}), using Claude fallback`);
-        leads = await claudeFallback(query, location, source);
+        leads = await claudeFallback(query, location, source, limit);
       }
     } else if (APIFY_KEY && source === 'Instagram') {
       try {
-        leads = await scrapeInstagram(query, location);
+        leads = await scrapeInstagram(query, location, limit);
         console.log(`✓ Instagram: ${leads.length} leads`);
       } catch (e) {
         console.log(`⚠ Instagram failed (${e.message.slice(0,80)}), using Claude fallback`);
-        leads = await claudeFallback(query, location, source);
+        leads = await claudeFallback(query, location, source, limit);
       }
     } else if (APIFY_KEY && source === 'LinkedIn') {
       try {
-        leads = await scrapeLinkedIn(query, location);
+        leads = await scrapeLinkedIn(query, location, limit);
         console.log(`✓ LinkedIn: ${leads.length} leads`);
       } catch (e) {
         console.log(`⚠ LinkedIn failed (${e.message.slice(0,80)}), using Claude fallback`);
-        leads = await claudeFallback(query, location, source);
+        leads = await claudeFallback(query, location, source, limit);
       }
     } else {
       // No Apify key or Directories selected — use Claude
-      leads = await claudeFallback(query, location, source);
+      leads = await claudeFallback(query, location, source, limit);
     }
 
     console.log(`✓ Total leads returned: ${leads.length}`);

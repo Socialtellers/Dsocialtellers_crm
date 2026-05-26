@@ -174,11 +174,11 @@ export async function runFullPipeline(lead, onProgress) {
 }
 
 // ─── APIFY SCRAPER ─────────────────────────────────────────────────
-export async function scrapeLeads(query, location, source = 'Google Maps') {
+export async function scrapeLeads(query, location, source = 'Google Maps', limit = 5) {
   const response = await fetch(`${BACKEND}/api/scrape`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, location, source })
+    body: JSON.stringify({ query, location, source, limit })
   });
   if (!response.ok) throw new Error(`Scrape error: ${response.status} — is the server running? Run: npm run server`);
   return response.json();

@@ -16,6 +16,7 @@ export default function AgentPage({ onNavigate }) {
   const [scrapeQuery, setScrapeQuery] = useState('');
   const [scrapeLocation, setScrapeLocation] = useState('Dubai');
   const [scrapeSource, setScrapeSource] = useState('Google Maps');
+  const [scrapeLimit, setScrapeLimit] = useState(5);
   const [scraping, setScraping] = useState(false);
   const [scrapeLog, setScrapeLog] = useState([]);
 
@@ -31,7 +32,7 @@ export default function AgentPage({ onNavigate }) {
     setScrapeLog([{ msg: `Initializing Apify scraper for "${scrapeQuery}" in ${scrapeLocation}...`, type: 'info' }]);
     try {
       setScrapeLog(l => [...l, { msg: `Calling ${scrapeSource} scraper actor via Apify...`, type: 'info' }]);
-      const newLeads = await scrapeLeads(scrapeQuery, scrapeLocation, scrapeSource);
+      const newLeads = await scrapeLeads(scrapeQuery, scrapeLocation, scrapeSource, scrapeLimit);
       if (Array.isArray(newLeads)) {
         newLeads.forEach(lead => db.addLead({ ...lead, id: `scraped_${Date.now()}_${Math.random().toString(36).slice(2,6)}` }));
         setScrapeLog(l => [...l,
@@ -154,7 +155,7 @@ export default function AgentPage({ onNavigate }) {
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: 5 }}>BUSINESS TYPE</div>
                 <Input value={scrapeQuery} onChange={e => setScrapeQuery(e.target.value)} placeholder="e.g. restaurants, beauty salons, gyms" />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 0.8fr', gap: 10 }}>
                 <div>
                   <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: 5 }}>LOCATION</div>
                   <Input value={scrapeLocation} onChange={e => setScrapeLocation(e.target.value)} placeholder="Dubai Marina" />
@@ -163,6 +164,11 @@ export default function AgentPage({ onNavigate }) {
                   <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: 5 }}>SOURCE</div>
                   <Select value={scrapeSource} onChange={e => setScrapeSource(e.target.value)}
                     options={['Google Maps', 'Instagram', 'LinkedIn', 'Directories']} style={{ width: '100%' }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: 5 }}>COUNT</div>
+                  <Select value={scrapeLimit} onChange={e => setScrapeLimit(Number(e.target.value))}
+                    options={[{value:5,label:'5'},{value:10,label:'10'},{value:20,label:'20'},{value:50,label:'50'}]} style={{ width: '100%' }} />
                 </div>
               </div>
             </div>
