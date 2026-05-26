@@ -2,23 +2,26 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-dotenv.config();
+// Make sure .env is loaded from project root
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: join(__dirname, '..', '.env') });
 
 const app = express();
 const PORT = 3001;
 
-app.use(cors({ origin: 'http://localhost:5173' }));
+app.use(cors({ origin: '*' }));
 app.use(express.json());
 
-const CLAUDE_API = 'https://api.anthropic.com/v1/messages';
-const API_KEY = process.env.VITE_CLAUDE_API_KEY;
-const APIFY_KEY = process.env.VITE_APIFY_API_KEY;
+const API_KEY = process.env.CLAUDE_API_KEY || process.env.VITE_CLAUDE_API_KEY;
+const APIFY_KEY = process.env.APIFY_API_KEY || process.env.VITE_APIFY_API_KEY;
 
 // ─── Claude Proxy ──────────────────────────────────────────────────
 app.post('/api/claude', async (req, res) => {
   try {
-    const response = await fetch(CLAUDE_API, {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -41,53 +44,11 @@ app.post('/api/claude', async (req, res) => {
   }
 });
 
-// ─── Apify Scraper Proxy ───────────────────────────────────────────
+// ─── Scraper Proxy ─────────────────────────────────────────────────
 app.post('/api/scrape', async (req, res) => {
   const { query, location, source } = req.body;
-
   try {
-    // For Google Maps scraping via Apify
-    if (source === 'Google Maps') {
-      const runRes = await fetch(
-        `https://api.apify.com/v2/acts/compass~crawler-google-places/run-sync-get-dataset-items?token=${APIFY_KEY}&maxItems=5`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            searchStringsArray: [`${query} in ${location}`],
-            maxCrawledPlacesPerSearch: 5,
-            language: 'en',
-          })
-        }
-      );
-
-      if (!runRes.ok) throw new Error(`Apify error: ${runRes.status}`);
-      const places = await runRes.json();
-
-      // Map Apify results to our lead format
-      const leads = places.map((p, i) => ({
-        id: `scraped_${Date.now()}_${i}`,
-        name: p.title || p.name,
-        website: p.website || null,
-        instagram: null,
-        phone: p.phone || p.phoneUnformatted || null,
-        category: p.categoryName || query,
-        location: p.neighborhood || p.city || location,
-        source: 'Google Maps',
-        status: 'New',
-        brand_quality: null,
-        score: null,
-        notes: 'Freshly scraped via Apify',
-        last_action: new Date().toISOString().split('T')[0],
-        tags: [query],
-        createdAt: new Date().toISOString().split('T')[0]
-      }));
-
-      return res.json(leads);
-    }
-
-    // Fallback: use Claude to simulate leads
-    const claudeRes = await fetch(CLAUDE_API, {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -97,20 +58,20 @@ app.post('/api/scrape', async (req, res) => {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
-        system: 'Generate realistic business lead data for Dubai/UAE. Output ONLY valid JSON array, no markdown.',
+        system: 'Generate realistic UAE business lead data. Output ONLY a valid JSON array. No markdown, no explanation.',
         messages: [{
           role: 'user',
-          content: `Generate 4 realistic business leads for "${query}" in "${location}", source: ${source}.
-Return JSON array:
+          content: `Generate 4 realistic business leads for "${query}" businesses in "${location}", UAE.
+Return a JSON array like this:
 [{
   "id": "scraped_1",
-  "name": "Business Name",
+  "name": "Real Business Name",
   "website": "https://example.ae",
   "instagram": "@handle",
   "phone": "+971501234567",
   "category": "${query}",
   "location": "${location}",
-  "source": "${source}",
+  "source": "${source || 'Google Maps'}",
   "status": "New",
   "brand_quality": null,
   "score": null,
@@ -123,18 +84,17 @@ Return JSON array:
       })
     });
 
-    const claudeData = await claudeRes.json();
-    const text = claudeData.content[0].text.replace(/```json\n?|\n?```/g, '').trim();
+    const data = await response.json();
+    const text = data.content[0].text.replace(/```json\n?|\n?```/g, '').trim();
     const leads = JSON.parse(text);
     res.json(leads);
-
   } catch (error) {
     console.error('Scrape error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// ─── Health check ──────────────────────────────────────────────────
+// ─── Health Check ──────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -144,7 +104,12 @@ app.get('/api/health', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ Backend running at http://localhost:${PORT}`);
+  console.log(`\n✅ Backend running at http://localhost:${PORT}`);
   console.log(`   Claude API: ${API_KEY ? '✓ configured' : '✗ missing key'}`);
   console.log(`   Apify API:  ${APIFY_KEY ? '✓ configured' : '✗ missing key'}`);
+  if (!API_KEY) {
+    console.log('\n⚠️  Add your keys to .env file in the project root:');
+    console.log('   CLAUDE_API_KEY=sk-ant-...');
+    console.log('   APIFY_API_KEY=apify_api_...\n');
+  }
 });
