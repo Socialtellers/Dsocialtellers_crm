@@ -86,11 +86,12 @@ async function scrapeGoogleMaps(query, location) {
 }
 
 async function scrapeInstagram(query, location) {
-  // Search for business accounts by hashtag or username
+  // Search for business accounts by hashtag — request more to get more unique accounts
   const results = await runApifyActor('apify~instagram-hashtag-scraper', {
-    hashtags: [`${query}${location.replace(/\s/g, '')}`, `${query}dubai`],
-    resultsLimit: 10,
+    hashtags: [`${query}${location.replace(/\s/g, '')}`, `${query}dubai`, `${query}uae`],
+    resultsLimit: 30,
   });
+  console.log(`  Instagram raw posts: ${results.length}`);
 
   // Extract unique accounts from posts
   const seen = new Set();
@@ -240,6 +241,25 @@ app.post('/api/claude', async (req, res) => {
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+
+// ─── Apify diagnostic test ─────────────────────────────────────────
+app.get('/api/test-apify', async (req, res) => {
+  if (!APIFY_KEY) return res.json({ error: 'No Apify key' });
+  try {
+    // Test if the Apify token is valid
+    const userRes = await fetch(`https://api.apify.com/v2/users/me?token=${APIFY_KEY}`);
+    const userData = await userRes.json();
+    res.json({
+      token_valid: userRes.ok,
+      account: userData.data?.username || 'unknown',
+      plan: userData.data?.plan || 'unknown',
+      monthly_usage: userData.data?.monthlyUsage || 'unknown'
+    });
+  } catch (e) {
+    res.json({ error: e.message });
   }
 });
 

@@ -30,7 +30,7 @@ export default function AgentPage({ onNavigate }) {
     setScraping(true);
     setScrapeLog([{ msg: `Initializing Apify scraper for "${scrapeQuery}" in ${scrapeLocation}...`, type: 'info' }]);
     try {
-      setScrapeLog(l => [...l, { msg: 'Calling Google Maps scraper actor...', type: 'info' }]);
+      setScrapeLog(l => [...l, { msg: `Calling ${scrapeSource} scraper actor via Apify...`, type: 'info' }]);
       const newLeads = await scrapeLeads(scrapeQuery, scrapeLocation, scrapeSource);
       if (Array.isArray(newLeads)) {
         newLeads.forEach(lead => db.addLead({ ...lead, id: `scraped_${Date.now()}_${Math.random().toString(36).slice(2,6)}` }));
