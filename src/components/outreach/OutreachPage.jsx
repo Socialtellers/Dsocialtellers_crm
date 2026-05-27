@@ -18,20 +18,52 @@ export default function OutreachPage({ selectedLead, onNavigate }) {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const sendMessage = (lead, type) => {
+  const sendMessage = async (lead, type) => {
+    if (type === 'email') {
+      if (!lead.website && !lead.email && !lead.contact_email) {
+        // We need an email address — try to use a contact field
+      }
+      // Determine recipient email. Many scraped leads won't have email — prompt if missing.
+      let recipient = lead.email || lead.contact_email;
+      if (!recipient) {
+        recipient = window.prompt(`No email on file for ${lead.name}. Enter recipient email:`);
+        if (!recipient) return;
+      }
+      try {
+        const res = await fetch('http://localhost:3001/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: recipient,
+            subject: lead.email_subject,
+            body: lead.email_body,
+            leadId: lead.id
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Send failed');
+        await db.updateLead(lead.id, { status: 'Contacted', channel: 'Email', last_action: new Date().toISOString().split('T')[0] });
+        alert(`✓ Email sent to ${recipient}`);
+      } catch (e) {
+        alert(`✗ Email failed: ${e.message}`);
+      }
+      return;
+    }
+
+    // WhatsApp — still logs only (not yet wired to a provider)
     const msg = {
       id: `m_${Date.now()}`,
       leadId: lead.id,
       type,
       direction: 'outbound',
-      subject: type === 'email' ? lead.email_subject : null,
-      content: type === 'email' ? lead.email_body : lead.whatsapp_message,
+      subject: null,
+      content: lead.whatsapp_message,
       timestamp: new Date().toISOString(),
       status: 'delivered'
     };
-    db.addMessage(msg);
-    db.updateLead(lead.id, { status: 'Contacted', channel: type === 'email' ? 'Email' : 'WhatsApp', last_action: new Date().toISOString().split('T')[0] });
-    alert(`${type === 'email' ? 'Email' : 'WhatsApp'} marked as sent for ${lead.name}`);
+    await db.addMessage(msg);
+    await db.updateLead(lead.id, { status: 'Contacted', channel: 'WhatsApp', last_action: new Date().toISOString().split('T')[0] });
+    alert(`WhatsApp marked as sent for ${lead.name} (WhatsApp sending not yet connected)`);
   };
 
   return (
@@ -95,7 +127,7 @@ export default function OutreachPage({ selectedLead, onNavigate }) {
                       {copied === 'email_body' ? 'Copied!' : 'Copy'}
                     </Button>
                     <Button size="sm" onClick={() => sendMessage(activeLead, 'email')} icon={Send}>
-                      Mark Sent
+                      Send Email
                     </Button>
                   </div>
                 </div>
@@ -127,7 +159,7 @@ export default function OutreachPage({ selectedLead, onNavigate }) {
                       {copied === 'wa' ? 'Copied!' : 'Copy'}
                     </Button>
                     <Button size="sm" style={{ background: '#16a34a', borderColor: '#16a34a', color: '#fff' }} onClick={() => sendMessage(activeLead, 'whatsapp')} icon={Send}>
-                      Mark Sent
+                      Send WhatsApp
                     </Button>
                   </div>
                 </div>

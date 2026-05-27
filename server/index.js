@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
+import nodemailer from 'nodemailer';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { createClient } from '@supabase/supabase-js';
@@ -395,6 +396,62 @@ app.post('/api/messages', async (req, res) => {
   }
 });
 
+// ════════════════════════════════════════════════════════════════
+// EMAIL SENDING (Gmail via nodemailer)
+// ════════════════════════════════════════════════════════════════
+
+const GMAIL_USER = process.env.GMAIL_USER;
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
+
+let mailer = null;
+if (GMAIL_USER && GMAIL_APP_PASSWORD) {
+  mailer = nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD }
+  });
+  console.log('✓ Gmail configured');
+} else {
+  console.log('⚠ Gmail not configured — email sending disabled');
+}
+
+app.post('/api/send-email', async (req, res) => {
+  const { to, subject, body, leadId } = req.body;
+  console.log(`\n→ Sending email to ${to}`);
+
+  if (!mailer) return res.status(500).json({ error: 'Gmail not configured. Add GMAIL_USER and GMAIL_APP_PASSWORD to .env' });
+  if (!to) return res.status(400).json({ error: 'No recipient email address' });
+
+  try {
+    const info = await mailer.sendMail({
+      from: `"Dsocialtellers" <${GMAIL_USER}>`,
+      to,
+      subject: subject || '(no subject)',
+      text: body,
+      html: body.replace(/\n/g, '<br>')
+    });
+    console.log(`✓ Email sent: ${info.messageId}`);
+
+    // Log to Supabase if available
+    if (supabase && leadId) {
+      await supabase.from('messages').insert({
+        id: `email_${Date.now()}`,
+        lead_id: leadId,
+        type: 'email',
+        direction: 'outbound',
+        subject,
+        content: body,
+        status: 'delivered',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({ success: true, messageId: info.messageId });
+  } catch (error) {
+    console.error('✗ Email error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ─── Health ────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({
@@ -402,6 +459,7 @@ app.get('/api/health', (req, res) => {
     claude: API_KEY ? '✓ configured' : '✗ missing',
     apify: APIFY_KEY ? '✓ configured' : '✗ missing',
     supabase: supabase ? '✓ connected' : '✗ not configured',
+    gmail: mailer ? '✓ configured' : '✗ not configured',
     platforms: {
       google_maps: '✓ real Apify actor',
       instagram: '✓ real Apify actor',
@@ -416,5 +474,6 @@ app.listen(PORT, () => {
   console.log(`   Claude:   ${API_KEY ? '✓' : '✗ missing'}`);
   console.log(`   Apify:    ${APIFY_KEY ? '✓' : '✗ missing'}`);
   console.log(`   Supabase: ${supabase ? '✓ connected' : '✗ not configured'}`);
+  console.log(`   Gmail:    ${mailer ? '✓ configured' : '✗ not configured'}`);
   console.log(`   Platforms: Google Maps | Instagram | LinkedIn | Directories\n`);
 });

@@ -10,6 +10,7 @@ create table if not exists leads (
   website text,
   instagram text,
   phone text,
+  email text,
   category text,
   location text,
   source text,
