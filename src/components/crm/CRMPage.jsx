@@ -130,7 +130,7 @@ function KanbanCard({ lead, color, onDragStart, onDragEnd, onClick }) {
         {lead.brand_quality && (
           <div style={{
             width: 6, height: 6, borderRadius: '50%', flexShrink: 0, marginLeft: 6, marginTop: 3,
-            background: { high: '#10b981', medium: '#f59e0b', low: '#ef4444' }[lead.brand_quality]
+            background: { high: '#16a34a', medium: '#f59e0b', low: '#ef4444' }[lead.brand_quality]
           }} />
         )}
       </div>
@@ -150,7 +150,7 @@ function KanbanCard({ lead, color, onDragStart, onDragEnd, onClick }) {
         <div style={{ height: 2, background: 'var(--border)', borderRadius: 1 }}>
           <div style={{
             width: `${lead.score}%`, height: '100%',
-            background: lead.score >= 70 ? '#10b981' : lead.score >= 45 ? '#f59e0b' : '#ef4444',
+            background: lead.score >= 70 ? '#16a34a' : lead.score >= 45 ? '#f59e0b' : '#ef4444',
             borderRadius: 1
           }} />
         </div>

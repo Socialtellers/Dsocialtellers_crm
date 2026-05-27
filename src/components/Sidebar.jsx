@@ -23,7 +23,7 @@ export default function Sidebar({ currentPage, onNavigate }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 32, height: 32,
-            background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))',
+            background: 'linear-gradient(135deg, #e8651e, #f5a623)',
             borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center'
           }}>
             <Zap size={16} color="#fff" fill="#fff" />
@@ -54,7 +54,7 @@ export default function Sidebar({ currentPage, onNavigate }) {
                 width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                 padding: '9px 12px', borderRadius: 7, marginBottom: 2,
                 background: active ? 'var(--accent-glow)' : 'transparent',
-                border: active ? '1px solid rgba(99,102,241,0.2)' : '1px solid transparent',
+                border: active ? '1px solid rgba(232,101,30,0.2)' : '1px solid transparent',
                 color: active ? 'var(--accent-primary)' : 'var(--text-secondary)',
                 fontSize: 13, fontWeight: active ? 600 : 400,
                 cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left'
@@ -74,8 +74,8 @@ export default function Sidebar({ currentPage, onNavigate }) {
       <div style={{ padding: '12px 10px', borderTop: '1px solid var(--border)' }}>
         <div style={{
           padding: '10px 12px', borderRadius: 8,
-          background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(124,58,237,0.08))',
-          border: '1px solid rgba(99,102,241,0.1)'
+          background: 'linear-gradient(135deg, rgba(232,101,30,0.1), rgba(245,166,35,0.1))',
+          border: '1px solid rgba(232,101,30,0.1)'
         }}>
           <div style={{ fontSize: 11, color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)', marginBottom: 4 }}>
             ● SYSTEM ONLINE

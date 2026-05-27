@@ -5,10 +5,10 @@ import { runFullPipeline, scrapeLeads } from '../../agents/pipeline';
 import { Button, Card, Input, Select, Spinner, Badge, PageHeader } from '../ui';
 
 const AGENTS = [
-  { id: 'validation', label: 'Data Validation Agent', icon: CheckCircle, desc: 'Validates and cleans lead data. Ensures contact info exists.', color: '#10b981' },
-  { id: 'research', label: 'Business Research Agent', icon: FlaskConical, desc: 'Analyzes website & social media. Identifies marketing weaknesses.', color: '#6366f1' },
+  { id: 'validation', label: 'Data Validation Agent', icon: CheckCircle, desc: 'Validates and cleans lead data. Ensures contact info exists.', color: '#16a34a' },
+  { id: 'research', label: 'Business Research Agent', icon: FlaskConical, desc: 'Analyzes website & social media. Identifies marketing weaknesses.', color: '#e8651e' },
   { id: 'strategy', label: 'Personalization Strategy', icon: Zap, desc: 'Crafts messaging angle and pain point focus per lead.', color: '#f59e0b' },
-  { id: 'copy', label: 'Copywriting Agent', icon: PenTool, desc: 'Generates cold email + WhatsApp message using research.', color: '#7c3aed' },
+  { id: 'copy', label: 'Copywriting Agent', icon: PenTool, desc: 'Generates cold email + WhatsApp message using research.', color: '#c0410f' },
   { id: 'crm', label: 'CRM Update Agent', icon: Database, desc: 'Logs all actions, updates statuses and pipeline stages.', color: '#f97316' },
 ];
 
@@ -87,7 +87,7 @@ export default function AgentPage({ onNavigate }) {
     setBatchRunning(false);
   };
 
-  const logColor = { info: 'var(--text-secondary)', success: '#10b981', error: '#ef4444', result: 'var(--accent-primary)' };
+  const logColor = { info: 'var(--text-secondary)', success: '#16a34a', error: '#ef4444', result: 'var(--accent-primary)' };
 
   return (
     <div style={{ padding: '0 0 32px' }}>
@@ -98,7 +98,7 @@ export default function AgentPage({ onNavigate }) {
 
       <div style={{ padding: '0 28px' }}>
         {/* Agent pipeline visualization */}
-        <Card style={{ marginBottom: 20, background: 'linear-gradient(135deg, rgba(99,102,241,0.04), rgba(124,58,237,0.04))' }}>
+        <Card style={{ marginBottom: 20, background: 'linear-gradient(135deg, rgba(232,101,30,0.04), rgba(192,65,15,0.04))' }}>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16 }}>
             Agent Pipeline Architecture
           </div>
@@ -146,8 +146,8 @@ export default function AgentPage({ onNavigate }) {
           {/* Scraping Panel */}
           <Card>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-              <div style={{ width: 28, height: 28, borderRadius: 7, background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Search size={13} color="#6366f1" />
+              <div style={{ width: 28, height: 28, borderRadius: 7, background: 'rgba(232,101,30,0.1)', border: '1px solid rgba(232,101,30,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Search size={13} color="#e8651e" />
               </div>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Lead Scraper</div>
@@ -196,8 +196,8 @@ export default function AgentPage({ onNavigate }) {
           {/* Batch Pipeline Panel */}
           <Card>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-              <div style={{ width: 28, height: 28, borderRadius: 7, background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Bot size={13} color="#7c3aed" />
+              <div style={{ width: 28, height: 28, borderRadius: 7, background: 'rgba(192,65,15,0.1)', border: '1px solid rgba(192,65,15,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Bot size={13} color="#c0410f" />
               </div>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Batch AI Pipeline</div>
@@ -205,12 +205,12 @@ export default function AgentPage({ onNavigate }) {
               </div>
             </div>
 
-            <div style={{ padding: '10px 12px', borderRadius: 7, background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.15)', marginBottom: 14 }}>
+            <div style={{ padding: '10px 12px', borderRadius: 7, background: 'rgba(192,65,15,0.06)', border: '1px solid rgba(192,65,15,0.15)', marginBottom: 14 }}>
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                 Runs all 5 agents sequentially on every "New" lead:<br/>
                 <span style={{ color: 'var(--text-muted)' }}>Validation → Research → Strategy → Copy → CRM</span>
               </div>
-              <div style={{ marginTop: 8, fontSize: 11, color: '#7c3aed', fontFamily: 'var(--font-mono)' }}>
+              <div style={{ marginTop: 8, fontSize: 11, color: '#c0410f', fontFamily: 'var(--font-mono)' }}>
                 {db.getLeads().filter(l => l.status === 'New' && !l.email_body).length} leads queued
               </div>
             </div>
@@ -231,11 +231,11 @@ export default function AgentPage({ onNavigate }) {
                 {batchProgress.map(p => (
                   <div key={p.id} style={{
                     padding: '8px 10px', borderRadius: 6,
-                    background: 'var(--bg-card)', border: `1px solid ${p.status === 'done' ? 'rgba(16,185,129,0.2)' : p.status === 'error' ? 'rgba(239,68,68,0.2)' : 'rgba(99,102,241,0.15)'}`,
+                    background: 'var(--bg-card)', border: `1px solid ${p.status === 'done' ? 'rgba(16,185,129,0.2)' : p.status === 'error' ? 'rgba(239,68,68,0.2)' : 'rgba(232,101,30,0.15)'}`,
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                       <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</span>
-                      <span style={{ fontSize: 10, color: p.status === 'done' ? '#10b981' : p.status === 'error' ? '#ef4444' : 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}>
+                      <span style={{ fontSize: 10, color: p.status === 'done' ? '#16a34a' : p.status === 'error' ? '#ef4444' : 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}>
                         {p.status === 'done' ? '✓' : p.status === 'error' ? '✗' : `${p.pct}%`}
                       </span>
                     </div>
@@ -243,7 +243,7 @@ export default function AgentPage({ onNavigate }) {
                     <div style={{ height: 2, background: 'var(--border)', borderRadius: 1 }}>
                       <div style={{
                         width: `${p.pct}%`, height: '100%',
-                        background: p.status === 'done' ? '#10b981' : p.status === 'error' ? '#ef4444' : 'var(--accent-primary)',
+                        background: p.status === 'done' ? '#16a34a' : p.status === 'error' ? '#ef4444' : 'var(--accent-primary)',
                         borderRadius: 1, transition: 'width 0.3s ease'
                       }} />
                     </div>
@@ -280,11 +280,11 @@ export default function AgentPage({ onNavigate }) {
                 border: `1px solid ${status === 'connected' ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)'}`
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: status === 'connected' ? '#10b981' : '#f59e0b' }} />
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: status === 'connected' ? '#16a34a' : '#f59e0b' }} />
                   <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{label}</span>
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{detail}</div>
-                <div style={{ fontSize: 10, color: status === 'connected' ? '#10b981' : '#f59e0b', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 4 }}>{status}</div>
+                <div style={{ fontSize: 10, color: status === 'connected' ? '#16a34a' : '#f59e0b', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 4 }}>{status}</div>
               </div>
             ))}
           </div>

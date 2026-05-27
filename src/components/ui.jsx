@@ -29,7 +29,7 @@ export function QualityBadge({ quality }) {
 }
 
 export function ScorePill({ score }) {
-  const color = score >= 70 ? '#10b981' : score >= 45 ? '#f59e0b' : '#ef4444';
+  const color = score >= 70 ? '#16a34a' : score >= 45 ? '#f59e0b' : '#ef4444';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
       <div style={{
@@ -87,7 +87,7 @@ export function StatCard({ label, value, sub, icon: Icon, color = 'var(--accent-
         )}
       </div>
       {trend !== undefined && (
-        <div style={{ marginTop: 10, fontSize: 10, color: trend >= 0 ? '#10b981' : '#ef4444', fontFamily: 'var(--font-mono)' }}>
+        <div style={{ marginTop: 10, fontSize: 10, color: trend >= 0 ? '#16a34a' : '#ef4444', fontFamily: 'var(--font-mono)' }}>
           {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}% vs last week
         </div>
       )}
@@ -186,7 +186,7 @@ export function Input({ value, onChange, placeholder, style = {}, type = 'text' 
         fontFamily: 'var(--font-body)',
         ...style
       }}
-      onFocus={e => e.target.style.borderColor = 'rgba(99,102,241,0.4)'}
+      onFocus={e => e.target.style.borderColor = 'rgba(232,101,30,0.4)'}
       onBlur={e => e.target.style.borderColor = 'var(--border)'}
     />
   );
@@ -221,8 +221,8 @@ export function Tag({ label, onRemove }) {
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 4,
-      background: 'rgba(99,102,241,0.08)',
-      border: '1px solid rgba(99,102,241,0.15)',
+      background: 'rgba(232,101,30,0.08)',
+      border: '1px solid rgba(232,101,30,0.15)',
       color: 'var(--accent-primary)',
       fontSize: 10, padding: '2px 8px', borderRadius: 20,
       fontFamily: 'var(--font-mono)'

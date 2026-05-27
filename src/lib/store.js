@@ -9,17 +9,17 @@ export const CRM_STATUSES = [
 ];
 
 export const STATUS_COLORS = {
-  'New': '#6366f1',
-  'Contacted': '#8b5cf6',
-  'Replied': '#f59e0b',
-  'Interested': '#22c55e',
-  'Not Interested': '#ef4444',
-  'Follow-up': '#f97316',
-  'Closed Won': '#16a34a',
-  'Closed Lost': '#6b7280'
+  'New': '#e8651e',
+  'Contacted': '#c0410f',
+  'Replied': '#d97706',
+  'Interested': '#16a34a',
+  'Not Interested': '#dc2626',
+  'Follow-up': '#ea580c',
+  'Closed Won': '#15803d',
+  'Closed Lost': '#9ca3af'
 };
 
-export const BRAND_QUALITY = { low: '#ef4444', medium: '#f59e0b', high: '#22c55e' };
+export const BRAND_QUALITY = { low: '#dc2626', medium: '#d97706', high: '#16a34a' };
 
 // Local cache (synced with Supabase)
 let leads = [];

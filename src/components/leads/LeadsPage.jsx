@@ -79,20 +79,20 @@ export default function LeadsPage({ onNavigate, selectedLead: initLead }) {
                   style={{
                     padding: '14px 16px', borderRadius: 10,
                     background: selected?.id === lead.id ? 'var(--accent-glow)' : 'var(--bg-card)',
-                    border: `1px solid ${selected?.id === lead.id ? 'rgba(99,102,241,0.3)' : 'var(--border)'}`,
+                    border: `1px solid ${selected?.id === lead.id ? 'rgba(232,101,30,0.3)' : 'var(--border)'}`,
                     cursor: 'pointer', transition: 'all 0.15s',
                     display: 'flex', alignItems: 'center', gap: 14
                   }}
-                  onMouseEnter={e => { if (selected?.id !== lead.id) e.currentTarget.style.borderColor = 'rgba(99,102,241,0.2)'; }}
+                  onMouseEnter={e => { if (selected?.id !== lead.id) e.currentTarget.style.borderColor = 'rgba(232,101,30,0.2)'; }}
                   onMouseLeave={e => { if (selected?.id !== lead.id) e.currentTarget.style.borderColor = 'var(--border)'; }}
                 >
                   <div style={{
                     width: 38, height: 38, borderRadius: 9, flexShrink: 0,
-                    background: `${STATUS_COLORS[lead.status] || '#6366f1'}15`,
-                    border: `1px solid ${STATUS_COLORS[lead.status] || '#6366f1'}25`,
+                    background: `${STATUS_COLORS[lead.status] || '#e8651e'}15`,
+                    border: `1px solid ${STATUS_COLORS[lead.status] || '#e8651e'}25`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14,
-                    color: STATUS_COLORS[lead.status] || '#6366f1'
+                    color: STATUS_COLORS[lead.status] || '#e8651e'
                   }}>
                     {lead.name.charAt(0)}
                   </div>
@@ -153,7 +153,7 @@ function LeadDetail({ lead, onClose, onRunPipeline, onStatusChange, onNavigate, 
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             <StatusBadge status={lead.status} />
             {lead.brand_quality && <QualityBadge quality={lead.brand_quality} />}
-            {lead.score && <Badge label={`Score: ${lead.score}`} color="#7c3aed" />}
+            {lead.score && <Badge label={`Score: ${lead.score}`} color="#c0410f" />}
           </div>
         </div>
         <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
@@ -216,7 +216,7 @@ function LeadDetail({ lead, onClose, onRunPipeline, onStatusChange, onNavigate, 
             )}
             {lead.growth_opportunities?.length > 0 && (
               <>
-                <div style={{ fontSize: 10, color: '#10b981', marginBottom: 5, marginTop: 10 }}>✦ Opportunities</div>
+                <div style={{ fontSize: 10, color: '#16a34a', marginBottom: 5, marginTop: 10 }}>✦ Opportunities</div>
                 {lead.growth_opportunities.map((o, i) => (
                   <div key={i} style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 3 }}>· {o}</div>
                 ))}
@@ -229,11 +229,11 @@ function LeadDetail({ lead, onClose, onRunPipeline, onStatusChange, onNavigate, 
         {lead.email_body && (
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px' }}>
             <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>Generated Outreach</div>
-            <div style={{ fontSize: 10, color: '#6366f1', marginBottom: 4 }}>✉ Email Subject</div>
+            <div style={{ fontSize: 10, color: '#e8651e', marginBottom: 4 }}>✉ Email Subject</div>
             <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 600, marginBottom: 10, padding: '6px 10px', background: 'var(--bg-input)', borderRadius: 5 }}>{lead.email_subject}</div>
             {lead.whatsapp_message && (
               <>
-                <div style={{ fontSize: 10, color: '#10b981', marginBottom: 4 }}>💬 WhatsApp</div>
+                <div style={{ fontSize: 10, color: '#16a34a', marginBottom: 4 }}>💬 WhatsApp</div>
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '6px 10px', background: 'var(--bg-input)', borderRadius: 5, lineHeight: 1.5 }}>{lead.whatsapp_message}</div>
               </>
             )}
@@ -251,11 +251,11 @@ function LeadDetail({ lead, onClose, onRunPipeline, onStatusChange, onNavigate, 
             {msgs.map(m => (
               <div key={m.id} style={{
                 padding: '8px 10px', borderRadius: 6, marginBottom: 6,
-                background: m.direction === 'inbound' ? 'rgba(16,185,129,0.08)' : 'rgba(99,102,241,0.06)',
-                border: `1px solid ${m.direction === 'inbound' ? 'rgba(16,185,129,0.2)' : 'rgba(99,102,241,0.15)'}`,
+                background: m.direction === 'inbound' ? 'rgba(16,185,129,0.08)' : 'rgba(232,101,30,0.06)',
+                border: `1px solid ${m.direction === 'inbound' ? 'rgba(16,185,129,0.2)' : 'rgba(232,101,30,0.15)'}`,
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                  <span style={{ fontSize: 10, color: m.direction === 'inbound' ? '#10b981' : '#6366f1', fontFamily: 'var(--font-mono)' }}>
+                  <span style={{ fontSize: 10, color: m.direction === 'inbound' ? '#16a34a' : '#e8651e', fontFamily: 'var(--font-mono)' }}>
                     {m.type.toUpperCase()} · {m.direction}
                   </span>
                   <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
@@ -284,8 +284,8 @@ function LeadDetail({ lead, onClose, onRunPipeline, onStatusChange, onNavigate, 
           {progress && (
             <div style={{
               padding: '10px 12px', borderRadius: 7, marginBottom: 10,
-              background: progress.error ? 'rgba(239,68,68,0.08)' : 'rgba(99,102,241,0.06)',
-              border: `1px solid ${progress.error ? 'rgba(239,68,68,0.2)' : 'rgba(99,102,241,0.15)'}`,
+              background: progress.error ? 'rgba(239,68,68,0.08)' : 'rgba(232,101,30,0.06)',
+              border: `1px solid ${progress.error ? 'rgba(239,68,68,0.2)' : 'rgba(232,101,30,0.15)'}`,
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
                 <span style={{ fontSize: 11, color: progress.error ? '#ef4444' : 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}>{progress.step}</span>
