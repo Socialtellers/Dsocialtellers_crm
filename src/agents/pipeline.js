@@ -2,12 +2,18 @@
 // Backend talks to Claude API and Apify — avoids CORS issues
 const BACKEND = 'http://localhost:3001';
 
-async function callClaude(systemPrompt, userMessage, maxTokens = 1000) {
+// Model tiers — use cheap Haiku for simple agents, Sonnet for quality-critical ones
+const MODELS = {
+  cheap: 'claude-haiku-4-5-20251001',   // ~10x cheaper, for simple/structured tasks
+  smart: 'claude-sonnet-4-5'            // for research + copywriting
+};
+
+async function callClaude(systemPrompt, userMessage, maxTokens = 1000, model = MODELS.smart) {
   const response = await fetch(`${BACKEND}/api/claude`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-5',
+      model,
       max_tokens: maxTokens,
       system: systemPrompt,
       messages: [{ role: 'user', content: userMessage }]
@@ -24,23 +30,23 @@ async function parseJSON(text) {
   catch { return JSON.parse(text.match(/\{[\s\S]*\}|\[[\s\S]*\]/)?.[0] || '{}'); }
 }
 
-// ─── AGENT 1: Data Validation ──────────────────────────────────────
+// ─── AGENT 1: Data Validation (NO AI — free + instant) ─────────────
+// Validation is a simple rule check, so we do it in code. No token cost.
 export async function runValidationAgent(rawLead) {
-  const system = `You are a data validation agent for a B2B lead generation system. 
-Output ONLY valid JSON. No explanations.`;
-
-  const user = `Validate this business lead. Rules: must have website OR instagram OR phone. Remove if clearly fake/incomplete.
-Lead: ${JSON.stringify(rawLead)}
-
-Output JSON:
-{
-  "valid": boolean,
-  "reason": string,
-  "clean_data": object
-}`;
-
-  const result = await callClaude(system, user);
-  return parseJSON(result);
+  const hasContact = !!(rawLead.website || rawLead.instagram || rawLead.phone);
+  const hasName = !!(rawLead.name && rawLead.name.trim().length > 1);
+  const valid = hasContact && hasName;
+  return {
+    valid,
+    reason: valid ? 'Has name and at least one contact method' : 'Missing name or all contact methods',
+    clean_data: {
+      ...rawLead,
+      name: rawLead.name?.trim(),
+      website: rawLead.website?.trim() || null,
+      instagram: rawLead.instagram?.trim() || null,
+      phone: rawLead.phone?.trim() || null,
+    }
+  };
 }
 
 // ─── AGENT 2: Business Research ────────────────────────────────────
@@ -69,7 +75,7 @@ Output JSON:
   "score": number between 0-100
 }`;
 
-  const result = await callClaude(system, user, 1000);
+  const result = await callClaude(system, user, 1000, MODELS.smart);
   return parseJSON(result);
 }
 
@@ -93,7 +99,7 @@ Output JSON:
   "offer_positioning": "how to position our services"
 }`;
 
-  const result = await callClaude(system, user);
+  const result = await callClaude(system, user, 500, MODELS.cheap);
   return parseJSON(result);
 }
 
@@ -120,30 +126,30 @@ Output JSON:
   "whatsapp_message": "casual WhatsApp message (2-3 sentences max, include 1 emoji)"
 }`;
 
-  const result = await callClaude(system, user, 1000);
+  const result = await callClaude(system, user, 600, MODELS.smart);
   return parseJSON(result);
 }
 
 // ─── AGENT 5: CRM Update ───────────────────────────────────────────
+// ─── AGENT 5: CRM Update (NO AI — free + instant) ──────────────────
+// Setting a status + timestamp needs no intelligence. Pure code, zero cost.
 export async function runCRMAgent(lead, action, notes = '') {
-  const system = `You are a CRM management agent. Output ONLY valid JSON.`;
-
-  const user = `Update CRM record:
-Lead: ${lead.name}
-Action taken: ${action}
-Notes: ${notes}
-Current status: ${lead.status}
-
-Output JSON:
-{
-  "status": "appropriate CRM status",
-  "notes": "updated notes",
-  "last_action": "${new Date().toISOString().split('T')[0]}",
-  "tags": ["relevant", "tags"]
-}`;
-
-  const result = await callClaude(system, user);
-  return parseJSON(result);
+  const statusMap = {
+    'contacted': 'Contacted',
+    'replied': 'Replied',
+    'interested': 'Interested',
+    'not interested': 'Not Interested',
+    'follow up': 'Follow-up',
+    'closed won': 'Closed Won',
+    'closed lost': 'Closed Lost'
+  };
+  const status = statusMap[action?.toLowerCase()] || lead.status || 'New';
+  return {
+    status,
+    notes: notes || lead.notes || '',
+    last_action: new Date().toISOString().split('T')[0],
+    tags: lead.tags || []
+  };
 }
 
 // ─── FULL PIPELINE ─────────────────────────────────────────────────
