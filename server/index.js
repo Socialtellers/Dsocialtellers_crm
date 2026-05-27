@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import fetch from 'node-fetch';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { createClient } from '@supabase/supabase-js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, '..', '.env') });
@@ -17,6 +18,30 @@ app.use(express.json());
 const API_KEY = process.env.CLAUDE_API_KEY || process.env.VITE_CLAUDE_API_KEY;
 const APIFY_KEY = process.env.APIFY_API_KEY || process.env.VITE_APIFY_API_KEY;
 const TODAY = () => new Date().toISOString().split('T')[0];
+
+// ─── Supabase client ───────────────────────────────────────────────
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
+let supabase = null;
+if (SUPABASE_URL && SUPABASE_KEY) {
+  supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+  console.log('✓ Supabase connected');
+} else {
+  console.log('⚠ Supabase not configured — using in-memory only');
+}
+
+// Map DB row (snake_case) → frontend lead (camelCase where needed)
+const rowToLead = (r) => ({
+  ...r,
+  createdAt: r.created_at,
+  marketing_weaknesses: r.marketing_weaknesses || [],
+  growth_opportunities: r.growth_opportunities || [],
+  tags: r.tags || []
+});
+const leadToRow = (l) => {
+  const { createdAt, ...rest } = l;
+  return { ...rest, created_at: createdAt || new Date().toISOString() };
+};
 
 // ─── Claude caller ─────────────────────────────────────────────────
 async function callClaude(system, userMsg, maxTokens = 1000) {
@@ -282,12 +307,101 @@ app.get('/api/test-apify', async (req, res) => {
   }
 });
 
+// ════════════════════════════════════════════════════════════════
+// DATABASE ENDPOINTS (Supabase)
+// ════════════════════════════════════════════════════════════════
+
+// GET all leads
+app.get('/api/leads', async (req, res) => {
+  if (!supabase) return res.json([]);
+  try {
+    const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json(data.map(rowToLead));
+  } catch (e) {
+    console.error('Get leads error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST add leads (single or array)
+app.post('/api/leads', async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: 'Supabase not configured' });
+  try {
+    const leads = Array.isArray(req.body) ? req.body : [req.body];
+    const rows = leads.map(leadToRow);
+    const { data, error } = await supabase.from('leads').upsert(rows).select();
+    if (error) throw error;
+    console.log(`✓ Saved ${data.length} leads to Supabase`);
+    res.json(data.map(rowToLead));
+  } catch (e) {
+    console.error('Add leads error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// PATCH update a lead
+app.patch('/api/leads/:id', async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: 'Supabase not configured' });
+  try {
+    const updates = { ...req.body };
+    delete updates.createdAt;
+    delete updates.id;
+    const { data, error } = await supabase.from('leads').update(updates).eq('id', req.params.id).select();
+    if (error) throw error;
+    res.json(data[0] ? rowToLead(data[0]) : null);
+  } catch (e) {
+    console.error('Update lead error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET messages for a lead
+app.get('/api/messages/:leadId', async (req, res) => {
+  if (!supabase) return res.json([]);
+  try {
+    const { data, error } = await supabase.from('messages').select('*').eq('lead_id', req.params.leadId).order('timestamp');
+    if (error) throw error;
+    res.json(data.map(m => ({ ...m, leadId: m.lead_id })));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET all messages
+app.get('/api/messages', async (req, res) => {
+  if (!supabase) return res.json([]);
+  try {
+    const { data, error } = await supabase.from('messages').select('*').order('timestamp');
+    if (error) throw error;
+    res.json(data.map(m => ({ ...m, leadId: m.lead_id })));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST add a message
+app.post('/api/messages', async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: 'Supabase not configured' });
+  try {
+    const { leadId, ...rest } = req.body;
+    const row = { ...rest, lead_id: leadId };
+    const { data, error } = await supabase.from('messages').insert(row).select();
+    if (error) throw error;
+    res.json({ ...data[0], leadId: data[0].lead_id });
+  } catch (e) {
+    console.error('Add message error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── Health ────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     claude: API_KEY ? '✓ configured' : '✗ missing',
     apify: APIFY_KEY ? '✓ configured' : '✗ missing',
+    supabase: supabase ? '✓ connected' : '✗ not configured',
     platforms: {
       google_maps: '✓ real Apify actor',
       instagram: '✓ real Apify actor',
@@ -299,7 +413,8 @@ app.get('/api/health', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`\n✅ Backend at http://localhost:${PORT}`);
-  console.log(`   Claude: ${API_KEY ? '✓' : '✗ missing'}`);
-  console.log(`   Apify:  ${APIFY_KEY ? '✓' : '✗ missing'}`);
+  console.log(`   Claude:   ${API_KEY ? '✓' : '✗ missing'}`);
+  console.log(`   Apify:    ${APIFY_KEY ? '✓' : '✗ missing'}`);
+  console.log(`   Supabase: ${supabase ? '✓ connected' : '✗ not configured'}`);
   console.log(`   Platforms: Google Maps | Instagram | LinkedIn | Directories\n`);
 });

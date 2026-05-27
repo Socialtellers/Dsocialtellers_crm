@@ -34,11 +34,16 @@ export default function AgentPage({ onNavigate }) {
       setScrapeLog(l => [...l, { msg: `Calling ${scrapeSource} scraper actor via Apify...`, type: 'info' }]);
       const newLeads = await scrapeLeads(scrapeQuery, scrapeLocation, scrapeSource, scrapeLimit);
       if (Array.isArray(newLeads)) {
-        newLeads.forEach(lead => db.addLead({ ...lead, id: `scraped_${Date.now()}_${Math.random().toString(36).slice(2,6)}` }));
+        // Ensure unique IDs before saving to DB
+        const withIds = newLeads.map((lead, i) => ({
+          ...lead,
+          id: `scraped_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 6)}`
+        }));
+        await db.addLeads(withIds);
         setScrapeLog(l => [...l,
-          { msg: `✓ Scraped ${newLeads.length} leads successfully`, type: 'success' },
-          ...newLeads.map(n => ({ msg: `  → ${n.name} | ${n.location} | ${n.category}`, type: 'result' })),
-          { msg: `Leads added to database. Run AI pipeline to generate outreach.`, type: 'info' }
+          { msg: `✓ Scraped ${withIds.length} leads successfully`, type: 'success' },
+          ...withIds.map(n => ({ msg: `  → ${n.name} | ${n.location} | ${n.category}`, type: 'result' })),
+          { msg: `Leads saved to database. Run AI pipeline to generate outreach.`, type: 'info' }
         ]);
       }
     } catch (e) {
