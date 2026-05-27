@@ -39,9 +39,24 @@ const rowToLead = (r) => ({
   growth_opportunities: r.growth_opportunities || [],
   tags: r.tags || []
 });
+
+// Only these columns exist in the DB — strip anything else to avoid insert errors
+const LEAD_COLUMNS = [
+  'id', 'name', 'website', 'instagram', 'phone', 'email', 'category', 'location',
+  'source', 'status', 'channel', 'brand_quality', 'score', 'business_summary',
+  'marketing_weaknesses', 'growth_opportunities', 'tone', 'email_subject',
+  'email_body', 'whatsapp_message', 'notes', 'last_action', 'tags', 'created_at'
+];
+
 const leadToRow = (l) => {
-  const { createdAt, ...rest } = l;
-  return { ...rest, created_at: createdAt || new Date().toISOString() };
+  const row = { ...l, created_at: l.createdAt || l.created_at || new Date().toISOString() };
+  delete row.createdAt;
+  // Keep only known columns
+  const clean = {};
+  for (const key of LEAD_COLUMNS) {
+    if (row[key] !== undefined) clean[key] = row[key];
+  }
+  return clean;
 };
 
 // ─── Claude caller ─────────────────────────────────────────────────
@@ -332,12 +347,15 @@ app.post('/api/leads', async (req, res) => {
     const leads = Array.isArray(req.body) ? req.body : [req.body];
     const rows = leads.map(leadToRow);
     const { data, error } = await supabase.from('leads').upsert(rows).select();
-    if (error) throw error;
+    if (error) {
+      console.error('✗ Supabase rejected insert:', JSON.stringify(error));
+      throw error;
+    }
     console.log(`✓ Saved ${data.length} leads to Supabase`);
     res.json(data.map(rowToLead));
   } catch (e) {
-    console.error('Add leads error:', e.message);
-    res.status(500).json({ error: e.message });
+    console.error('Add leads error:', e.message, e.details || '', e.hint || '');
+    res.status(500).json({ error: e.message, details: e.details, hint: e.hint });
   }
 });
 
