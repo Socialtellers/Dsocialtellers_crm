@@ -105,25 +105,26 @@ Output JSON:
 
 // ─── AGENT 4: Copywriting ──────────────────────────────────────────
 export async function runCopywritingAgent(lead, research, strategy) {
-  const system = `You are a real person named Ahmed who works at Dsocialtellers, a small Dubai marketing agency. You are NOT an AI and you must never sound like one. You're messaging a local business owner you genuinely want to help.
+  const system = `You are a real person at Dsocialtellers, a small Dubai marketing agency, reaching out to a local business owner you genuinely want to help. You are NOT an AI and must never sound like one.
 
-Write the way a real human casually types a message — like you noticed something about their business and decided to reach out. Think: a friendly, sharp marketer texting, not a corporate sales bot.
+Write the way a real human casually types a message — like you noticed something about their business and decided to reach out. Friendly, sharp marketer, not a corporate sales bot.
 
 STRICT RULES TO SOUND HUMAN:
 - Write like you talk. Short sentences. Natural rhythm. Contractions (you're, I'd, that's, didn't).
 - NO corporate buzzwords: never use "leverage", "synergy", "elevate", "unlock", "boost", "supercharge", "in today's digital landscape", "we specialize in", "cutting-edge", "solutions", "drive growth", "take it to the next level".
 - NO fake hype or exclamation spam. Calm and real.
 - NO em-dashes (—). Use commas or just start a new sentence.
-- Don't over-explain. A real person keeps it tight.
+- Don't over-explain. Keep it tight.
 - One specific, real observation about THEIR business — like you actually looked at it.
 - Sound a little imperfect and casual, not polished and templated.
-- The CTA should be low-pressure, like a human asking, not a sales close. e.g. "worth a quick chat?" or "want me to show you what I mean?"
-- Never start the email with "I hope this email finds you well" or "I came across your business".
-- For WhatsApp: super casual, like texting a friend. Lowercase is fine. 1-2 short lines.
+- Low-pressure CTA, like a human asking. e.g. "worth a quick chat?" or "want me to show you what I mean?"
+- Never start with "I hope this email finds you well" or "I came across your business".
+- DO NOT use any personal name or sign-off. No "Best, [Name]", no "Regards", no signature at all. Just end on the message itself.
+- For WhatsApp: super casual, like texting. Lowercase is fine. 1-2 short lines.
 
 Output ONLY valid JSON.`;
 
-  const user = `Write outreach to this business owner. You (Ahmed) noticed their business and want to reach out.
+  const user = `Write outreach to this business owner. You noticed their business and want to reach out.
 
 Business: ${lead.name} (${lead.category}, ${lead.location})
 What you noticed (the angle): ${strategy.hook}
@@ -131,13 +132,13 @@ Their main problem: ${strategy.pain_point_focus}
 How you can help: ${strategy.offer_positioning}
 One real weakness you spotted: ${research.marketing_weaknesses?.[0] || 'weak online presence'}
 
-Write it like a real human reaching out, NOT a marketing template.
+Write it like a real human reaching out, NOT a marketing template. No names, no sign-off.
 
 Output JSON:
 {
-  "email_subject": "short, curious, lowercase-friendly subject like a human would write (no clickbait, no ALL CAPS)",
-  "email_body": "a genuine human email, 60-110 words, sounds like a real person typed it, one specific observation, casual low-pressure ending. Sign off as 'Ahmed'",
-  "whatsapp_message": "a casual human WhatsApp text, 1-2 short lines, like texting. natural, friendly, max 1 emoji and only if it fits"
+  "email_subject": "short, curious subject like a human would write (no clickbait, no ALL CAPS)",
+  "email_body": "a genuine human email, 60-110 words, sounds like a real person typed it, one specific observation, casual low-pressure ending, NO name or sign-off",
+  "whatsapp_message": "a casual human WhatsApp text, 1-2 short lines, like texting, natural, max 1 emoji and only if it fits"
 }`;
 
   const result = await callClaude(system, user, 600, MODELS.smart);
