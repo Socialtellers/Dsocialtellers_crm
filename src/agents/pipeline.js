@@ -105,6 +105,8 @@ Output JSON:
 
 // ─── AGENT 4: Copywriting ──────────────────────────────────────────
 export async function runCopywritingAgent(lead, research, strategy, calendlyLink = '') {
+  // Clean the business name for greetings — strip taglines after | - – : etc.
+  const cleanName = (lead.name || '').split(/\s*[|\-–—:•]\s*/)[0].trim() || lead.name;
   const system = `You are a real person at Dsocialtellers, a small Dubai marketing agency, reaching out to a local business owner you genuinely want to help. You are NOT an AI and must never sound like one.
 
 Write the way a real human casually types a message — like you noticed something about their business and decided to reach out. Friendly, sharp marketer, not a corporate sales bot.
@@ -120,20 +122,20 @@ STRICT RULES TO SOUND HUMAN:
 - Never start with "I hope this email finds you well".
 
 EMAIL FORMAT:
-- Start with a greeting: "Hi ${lead.name}," (use the business name).
+- Start with a greeting: "Hi ${cleanName}," (use the business name).
 - Then the body (your observation + how you can help).
 - End with a sign-off: "Thanks,\\nDsocialtellers"
 ${calendlyLink ? `- Do NOT paste the raw booking link in the email body. A "Book a Call" button is added automatically, so just invite them to book (e.g. "if you're up for it, book a quick call below").` : ''}
 
 WHATSAPP FORMAT:
-- Super casual, like texting. Start with "Hi ${lead.name}!" then 1-2 short lines.
+- Super casual, like texting. Start with "Hi ${cleanName}!" then 1-2 short lines.
 ${calendlyLink ? `- End the WhatsApp message with the booking link on its own line: ${calendlyLink}` : `- End with a casual ask like "worth a quick chat?"`}
 
 Output ONLY valid JSON.`;
 
   const user = `Write outreach to this business owner. You noticed their business and want to reach out.
 
-Business: ${lead.name} (${lead.category}, ${lead.location})
+Business: ${cleanName} (${lead.category}, ${lead.location})
 What you noticed (the angle): ${strategy.hook}
 Their main problem: ${strategy.pain_point_focus}
 How you can help: ${strategy.offer_positioning}
@@ -144,8 +146,8 @@ Write it like a real human reaching out, NOT a marketing template.
 Output JSON:
 {
   "email_subject": "short, curious subject like a human would write (no clickbait, no ALL CAPS)",
-  "email_body": "Starts with 'Hi ${lead.name},' then a genuine human email of 60-110 words, one specific observation, then ends with 'Thanks,\\nDsocialtellers'${calendlyLink ? '. Do NOT include the raw booking URL — invite them to book the call below.' : ''}",
-  "whatsapp_message": "Starts with 'Hi ${lead.name}!' then a casual 1-2 line text${calendlyLink ? `, ending with the booking link ${calendlyLink} on its own line` : ''}, natural, max 1 emoji"
+  "email_body": "Starts with 'Hi ${cleanName},' then a genuine human email of 60-110 words, one specific observation, then ends with 'Thanks,\\nDsocialtellers'${calendlyLink ? '. Do NOT include the raw booking URL — invite them to book the call below.' : ''}",
+  "whatsapp_message": "Starts with 'Hi ${cleanName}!' then a casual 1-2 line text${calendlyLink ? `, ending with the booking link ${calendlyLink} on its own line` : ''}, natural, max 1 emoji"
 }`;
 
   const result = await callClaude(system, user, 600, MODELS.smart);

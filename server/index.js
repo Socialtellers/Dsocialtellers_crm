@@ -20,6 +20,16 @@ const API_KEY = process.env.CLAUDE_API_KEY || process.env.VITE_CLAUDE_API_KEY;
 const APIFY_KEY = process.env.APIFY_API_KEY || process.env.VITE_APIFY_API_KEY;
 const TODAY = () => new Date().toISOString().split('T')[0];
 
+// Clean business names from scrapers — strip taglines after | - – — : •
+// "GymNation Bur Dubai | Best Gym In Bur Dubai" → "GymNation Bur Dubai"
+const cleanName = (raw) => {
+  if (!raw) return raw;
+  let n = raw.split(/\s*[|\-–—:•]\s*/)[0].trim();
+  // Safety: if splitting left it too short, keep original
+  if (n.length < 2) n = raw.trim();
+  return n;
+};
+
 // ─── Supabase client ───────────────────────────────────────────────
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
@@ -109,7 +119,7 @@ async function scrapeGoogleMaps(query, location, limit = 5) {
 
   return results.map((p, i) => ({
     id: `gmap_${Date.now()}_${i}`,
-    name: p.title,
+    name: cleanName(p.title),
     website: p.website || null,
     instagram: null,
     phone: p.phone || p.phoneUnformatted || null,
@@ -146,7 +156,7 @@ async function scrapeInstagram(query, location, limit = 5) {
     seen.add(post.ownerUsername);
     leads.push({
       id: `ig_${Date.now()}_${leads.length}`,
-      name: post.ownerFullName || post.ownerUsername,
+      name: cleanName(post.ownerFullName || post.ownerUsername),
       website: null,
       instagram: `@${post.ownerUsername}`,
       phone: null,
@@ -174,7 +184,7 @@ async function scrapeLinkedIn(query, location, limit = 5) {
 
   return results.map((c, i) => ({
     id: `li_${Date.now()}_${i}`,
-    name: c.name || c.companyName,
+    name: cleanName(c.name || c.companyName),
     website: c.website || null,
     instagram: null,
     phone: null,
