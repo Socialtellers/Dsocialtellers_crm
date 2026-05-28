@@ -49,34 +49,19 @@ export async function runValidationAgent(rawLead) {
   };
 }
 
-// ─── AGENT 2: Business Research ────────────────────────────────────
+// ─── AGENT 2: Business Research (REAL — fetches their website) ─────
 export async function runResearchAgent(lead) {
-  const system = `You are a business intelligence analyst specializing in digital marketing audits for SMEs in Dubai and the UAE.
-You analyze businesses and identify marketing weaknesses and growth opportunities.
-Output ONLY valid JSON. Be specific and actionable.`;
-
-  const user = `Analyze this business for marketing weaknesses and opportunities:
-
-Business: ${lead.name}
-Category: ${lead.category}
-Location: ${lead.location}
-Website: ${lead.website || 'None'}
-Instagram: ${lead.instagram || 'None'}
-Phone: ${lead.phone || 'None'}
-Source: ${lead.source}
-
-Output JSON:
-{
-  "business_summary": "2-3 sentence description",
-  "marketing_weaknesses": ["array", "of", "specific", "weaknesses"],
-  "growth_opportunities": ["array", "of", "actionable", "opportunities"],
-  "brand_quality": "low|medium|high",
-  "tone": "suggested communication tone",
-  "score": number between 0-100
-}`;
-
-  const result = await callClaude(system, user, 1000, MODELS.smart);
-  return parseJSON(result);
+  // Calls the backend which fetches the actual website and analyzes real content
+  const response = await fetch(`${BACKEND}/api/research`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(lead)
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(`Research failed: ${err.error || response.status}`);
+  }
+  return response.json();
 }
 
 // ─── AGENT 3: Personalization Strategy ─────────────────────────────

@@ -330,6 +330,147 @@ app.post('/api/claude', async (req, res) => {
   }
 });
 
+// ════════════════════════════════════════════════════════════════
+// REAL WEBSITE RESEARCH — fetches the actual site and analyzes it
+// ════════════════════════════════════════════════════════════════
+
+// Fetch a website and extract readable text (strip HTML tags/scripts)
+async function fetchWebsiteText(url) {
+  try {
+    let target = url.startsWith('http') ? url : `https://${url}`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000); // 12s timeout
+
+    const resp = await fetch(target, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; DsocialtellersBot/1.0)' },
+      redirect: 'follow'
+    });
+    clearTimeout(timeout);
+
+    if (!resp.ok) return { ok: false, reason: `HTTP ${resp.status}`, text: '' };
+
+    const html = await resp.text();
+
+    // Detect key signals before stripping
+    const signals = {
+      hasBooking: /book|appointment|reserve|schedule|calendly|booking/i.test(html),
+      hasInstagram: /instagram\.com/i.test(html),
+      hasFacebook: /facebook\.com/i.test(html),
+      hasWhatsApp: /wa\.me|whatsapp/i.test(html),
+      hasContactForm: /<form/i.test(html),
+      hasPhone: /tel:|\+971|05\d/i.test(html),
+      hasShop: /shop|cart|checkout|add to cart|buy now/i.test(html),
+      pageLength: html.length
+    };
+
+    // Strip scripts, styles, tags → plain text
+    let text = html
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // Keep first ~2500 chars (enough for analysis, controls token cost)
+    text = text.slice(0, 2500);
+
+    return { ok: true, text, signals };
+  } catch (e) {
+    return { ok: false, reason: e.name === 'AbortError' ? 'timeout' : e.message, text: '' };
+  }
+}
+
+// Real research endpoint — fetches website, then Claude analyzes actual content
+app.post('/api/research', async (req, res) => {
+  const lead = req.body;
+  console.log(`\n🔬 Researching ${lead.name}...`);
+
+  try {
+    if (!API_KEY) return res.status(500).json({ error: 'CLAUDE_API_KEY missing in .env' });
+
+    // 1. Fetch the real website
+    let siteData = { ok: false, text: '', signals: {} };
+    if (lead.website) {
+      console.log(`  Fetching site: ${lead.website}`);
+      siteData = await fetchWebsiteText(lead.website);
+      console.log(`  Site fetch: ${siteData.ok ? 'OK (' + siteData.text.length + ' chars)' : 'FAILED (' + siteData.reason + ')'}`);
+    }
+
+    // 2. Build a research prompt grounded in REAL data
+    const siteContext = siteData.ok
+      ? `ACTUAL WEBSITE CONTENT (first 2500 chars):
+"""
+${siteData.text}
+"""
+
+DETECTED SIGNALS FROM THEIR SITE:
+- Online booking present: ${siteData.signals.hasBooking ? 'YES' : 'NO'}
+- Instagram linked: ${siteData.signals.hasInstagram ? 'YES' : 'NO'}
+- Facebook linked: ${siteData.signals.hasFacebook ? 'YES' : 'NO'}
+- WhatsApp present: ${siteData.signals.hasWhatsApp ? 'YES' : 'NO'}
+- Contact form present: ${siteData.signals.hasContactForm ? 'YES' : 'NO'}
+- Phone number on site: ${siteData.signals.hasPhone ? 'YES' : 'NO'}
+- Online shop/cart: ${siteData.signals.hasShop ? 'YES' : 'NO'}`
+      : lead.website
+        ? `IMPORTANT: Their website (${lead.website}) could NOT be reached (${siteData.reason}). This itself is a finding — a slow or down website is a real marketing problem. Base your analysis on this fact plus the business type.`
+        : `IMPORTANT: This business has NO website at all. That is a major, VERIFIED weakness for a ${lead.category} in ${lead.location}.`;
+
+    const system = `You are a business intelligence analyst doing a digital marketing audit for a Dubai agency.
+You MUST base every weakness and opportunity on the ACTUAL DATA provided below, not assumptions.
+If a signal says booking is present, do NOT claim they lack booking. Only state what the data supports.
+When you reference a finding, make sure it matches the detected signals.
+Output ONLY valid JSON.`;
+
+    const user = `Analyze this business using the REAL data below.
+
+Business: ${lead.name}
+Category: ${lead.category}
+Location: ${lead.location}
+Website: ${lead.website || 'NONE'}
+Instagram field: ${lead.instagram || 'NONE'}
+Phone: ${lead.phone || 'NONE'}
+
+${siteContext}
+
+Based on the ACTUAL data above (not guesses), output JSON:
+{
+  "business_summary": "2-3 sentences based on what you actually saw",
+  "marketing_weaknesses": ["only weaknesses the real data supports"],
+  "growth_opportunities": ["actionable opportunities based on what's missing"],
+  "brand_quality": "low|medium|high",
+  "tone": "suggested communication tone",
+  "score": number 0-100,
+  "data_source": "${siteData.ok ? 'real website content' : lead.website ? 'website unreachable' : 'no website'}"
+}`;
+
+    // 3. Call Claude with the real content
+    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 1200,
+        system,
+        messages: [{ role: 'user', content: user }]
+      })
+    });
+
+    const data = await claudeRes.json();
+    if (!claudeRes.ok || !data.content?.[0]) throw new Error(JSON.stringify(data));
+
+    const text = data.content[0].text.replace(/```json\n?|\n?```/g, '').trim();
+    const research = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || text);
+    console.log(`✓ Research done (${research.data_source})`);
+    res.json(research);
+
+  } catch (error) {
+    console.error('✗ Research error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 // ─── Apify diagnostic test ─────────────────────────────────────────
 app.get('/api/test-apify', async (req, res) => {
