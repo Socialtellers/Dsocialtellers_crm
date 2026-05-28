@@ -82,6 +82,13 @@ export const db = {
     return leads.find(l => l.id === id);
   },
 
+  deleteLead: async (id) => {
+    leads = leads.filter(l => l.id !== id);
+    try {
+      await fetch(`${BACKEND}/api/leads/${id}`, { method: 'DELETE' });
+    } catch (e) { console.warn('Delete failed:', e.message); }
+  },
+
   getMessages: (leadId) => messages.filter(m => m.leadId === leadId),
   getAllMessages: () => [...messages],
 
