@@ -20,12 +20,28 @@ const API_KEY = process.env.CLAUDE_API_KEY || process.env.VITE_CLAUDE_API_KEY;
 const APIFY_KEY = process.env.APIFY_API_KEY || process.env.VITE_APIFY_API_KEY;
 const TODAY = () => new Date().toISOString().split('T')[0];
 
-// Clean business names from scrapers — strip taglines after | - – — : •
-// "GymNation Bur Dubai | Best Gym In Bur Dubai" → "GymNation Bur Dubai"
+// Common UAE areas/cities to strip from the end of business names
+const UAE_AREAS = [
+  'Bur Dubai', 'Al Mankhool', 'Al Quoz', 'Al Barsha', 'Business Bay', 'Downtown Dubai',
+  'Dubai Marina', 'JLT', 'Jumeirah Lakes Towers', 'Deira', 'Karama', 'Satwa', 'Jumeirah',
+  'Palm Jumeirah', 'Dubai Hills', 'Mirdif', 'Silicon Oasis', 'Tecom', 'Media City',
+  'Internet City', 'Sheikh Zayed Road', 'Al Nahda', 'International City', 'Motor City',
+  'Sports City', 'Arabian Ranches', 'Discovery Gardens', 'Dubai', 'Abu Dhabi', 'Sharjah',
+  'Ajman', 'UAE', 'United Arab Emirates'
+];
+
+// Clean business names: strip taglines after separators, then strip trailing area names
+// "GymNation Bur Dubai | Best Gym In Bur Dubai" → "GymNation"
 const cleanName = (raw) => {
   if (!raw) return raw;
+  // 1. Cut off taglines after | - – — : •
   let n = raw.split(/\s*[|\-–—:•]\s*/)[0].trim();
-  // Safety: if splitting left it too short, keep original
+  // 2. Strip a trailing UAE area name (longest match first)
+  const sorted = [...UAE_AREAS].sort((a, b) => b.length - a.length);
+  for (const area of sorted) {
+    const re = new RegExp(`\\s+${area.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    if (re.test(n)) { n = n.replace(re, '').trim(); break; }
+  }
   if (n.length < 2) n = raw.trim();
   return n;
 };

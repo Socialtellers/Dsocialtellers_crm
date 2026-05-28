@@ -105,8 +105,15 @@ Output JSON:
 
 // ─── AGENT 4: Copywriting ──────────────────────────────────────────
 export async function runCopywritingAgent(lead, research, strategy, calendlyLink = '') {
-  // Clean the business name for greetings — strip taglines after | - – : etc.
-  const cleanName = (lead.name || '').split(/\s*[|\-–—:•]\s*/)[0].trim() || lead.name;
+  // Clean the business name for greetings — strip taglines + trailing UAE area names
+  const UAE_AREAS = ['Bur Dubai','Al Mankhool','Al Quoz','Al Barsha','Business Bay','Downtown Dubai','Dubai Marina','JLT','Jumeirah Lakes Towers','Deira','Karama','Satwa','Jumeirah','Palm Jumeirah','Dubai Hills','Mirdif','Silicon Oasis','Tecom','Media City','Internet City','Sheikh Zayed Road','Al Nahda','International City','Motor City','Sports City','Arabian Ranches','Discovery Gardens','Dubai','Abu Dhabi','Sharjah','Ajman','UAE','United Arab Emirates'];
+  let cleanName = (lead.name || '').split(/\s*[|\-–—:•]\s*/)[0].trim();
+  for (const area of [...UAE_AREAS].sort((a, b) => b.length - a.length)) {
+    const re = new RegExp(`\\s+${area.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    if (re.test(cleanName)) { cleanName = cleanName.replace(re, '').trim(); break; }
+  }
+  if (!cleanName || cleanName.length < 2) cleanName = lead.name;
+
   const system = `You are a real person at Dsocialtellers, a small Dubai marketing agency, reaching out to a local business owner you genuinely want to help. You are NOT an AI and must never sound like one.
 
 Write the way a real human casually types a message — like you noticed something about their business and decided to reach out. Friendly, sharp marketer, not a corporate sales bot.
