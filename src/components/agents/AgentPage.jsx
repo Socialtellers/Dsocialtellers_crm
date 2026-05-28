@@ -199,7 +199,7 @@ export default function AgentPage({ onNavigate }) {
                 <div>
                   <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: 5 }}>SOURCE</div>
                   <Select value={scrapeSource} onChange={e => setScrapeSource(e.target.value)}
-                    options={['Google Maps', 'Instagram', 'LinkedIn', 'Directories']} style={{ width: '100%' }} />
+                    options={['Google Maps', 'Instagram', 'LinkedIn']} style={{ width: '100%' }} />
                 </div>
                 <div>
                   <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: 5 }}>COUNT</div>
