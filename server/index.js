@@ -106,22 +106,51 @@ async function callClaude(system, userMsg, maxTokens = 1000) {
   return data.content[0].text.replace(/```json\n?|\n?```/g, '').trim();
 }
 
-// ─── Apify caller ──────────────────────────────────────────────────
+// ─── Apify caller (async — avoids 300s sync timeout) ──────────────
 async function runApifyActor(actorId, input, limit = 5) {
   console.log(`→ Running Apify actor: ${actorId} (limit ${limit})`);
-  const res = await fetch(
-    `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?token=${APIFY_KEY}&maxItems=${limit}`,
+
+  // 1. Start the run (async)
+  const startRes = await fetch(
+    `https://api.apify.com/v2/acts/${actorId}/runs?token=${APIFY_KEY}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input)
     }
   );
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Apify error ${res.status}: ${err}`);
+  if (!startRes.ok) {
+    const err = await startRes.text();
+    throw new Error(`Apify start error ${startRes.status}: ${err}`);
   }
-  return res.json();
+  const { data: run } = await startRes.json();
+  const runId = run.id;
+  console.log(`  Run started: ${runId}`);
+
+  // 2. Poll until SUCCEEDED or FAILED (max 10 min)
+  const POLL_INTERVAL = 4000;
+  const MAX_WAIT = 600000;
+  const deadline = Date.now() + MAX_WAIT;
+
+  while (Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, POLL_INTERVAL));
+    const statusRes = await fetch(
+      `https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_KEY}`
+    );
+    const { data: statusData } = await statusRes.json();
+    console.log(`  Status: ${statusData.status}`);
+    if (statusData.status === 'SUCCEEDED') break;
+    if (['FAILED', 'ABORTED', 'TIMED-OUT'].includes(statusData.status)) {
+      throw new Error(`Apify run ${statusData.status}`);
+    }
+  }
+
+  // 3. Fetch dataset items
+  const dataRes = await fetch(
+    `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${APIFY_KEY}&limit=${limit}`
+  );
+  if (!dataRes.ok) throw new Error(`Apify dataset fetch error ${dataRes.status}`);
+  return dataRes.json();
 }
 
 // ─── Platform scrapers ─────────────────────────────────────────────
