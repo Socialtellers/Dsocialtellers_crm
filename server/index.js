@@ -433,19 +433,45 @@ if (GMAIL_USER && GMAIL_APP_PASSWORD) {
 }
 
 app.post('/api/send-email', async (req, res) => {
-  const { to, subject, body, leadId } = req.body;
+  const { to, subject, body, leadId, calendlyLink } = req.body;
   console.log(`\n→ Sending email to ${to}`);
 
   if (!mailer) return res.status(500).json({ error: 'Gmail not configured. Add GMAIL_USER and GMAIL_APP_PASSWORD to .env' });
   if (!to) return res.status(400).json({ error: 'No recipient email address' });
 
   try {
+    // Strip any raw calendly URL from the body (we'll show a button instead)
+    let cleanBody = body;
+    if (calendlyLink) {
+      cleanBody = cleanBody.replace(new RegExp(calendlyLink.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '').trim();
+    }
+
+    // Build a styled button if we have a calendly link
+    const bookButton = calendlyLink ? `
+      <div style="margin:24px 0;">
+        <a href="${calendlyLink}" target="_blank"
+           style="display:inline-block;background:#e8651e;color:#ffffff;text-decoration:none;
+                  padding:14px 28px;border-radius:8px;font-weight:600;font-size:15px;
+                  font-family:Arial,sans-serif;">
+          📅 Book a Call
+        </a>
+        <div style="font-size:12px;color:#888;margin-top:8px;font-family:Arial,sans-serif;">
+          Pick any time that works for you
+        </div>
+      </div>` : '';
+
+    const htmlBody = `
+      <div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#333;max-width:560px;">
+        ${cleanBody.replace(/\n/g, '<br>')}
+        ${bookButton}
+      </div>`;
+
     const info = await mailer.sendMail({
       from: `"Dsocialtellers" <${GMAIL_USER}>`,
       to,
       subject: subject || '(no subject)',
-      text: body,
-      html: body.replace(/\n/g, '<br>')
+      text: body + (calendlyLink ? `\n\nBook a call: ${calendlyLink}` : ''),
+      html: htmlBody
     });
     console.log(`✓ Email sent: ${info.messageId}`);
 
@@ -467,6 +493,59 @@ app.post('/api/send-email', async (req, res) => {
   } catch (error) {
     console.error('✗ Email error:', error.message);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ════════════════════════════════════════════════════════════════
+// CALENDLY WEBHOOK — fires when someone books a call
+// ════════════════════════════════════════════════════════════════
+app.post('/api/calendly-webhook', async (req, res) => {
+  try {
+    const event = req.body;
+    console.log('\n📅 Calendly webhook received:', event.event);
+
+    // Calendly sends invitee.created when someone books
+    if (event.event === 'invitee.created') {
+      const invitee = event.payload;
+      const email = invitee?.email;
+      const name = invitee?.name;
+      const meetingTime = invitee?.scheduled_event?.start_time;
+
+      console.log(`✓ New booking: ${name} (${email}) at ${meetingTime}`);
+
+      // Try to match this booking to a lead by email, and update status
+      if (supabase && email) {
+        const { data: matches } = await supabase.from('leads').select('*').eq('email', email);
+        if (matches && matches.length > 0) {
+          const lead = matches[0];
+          await supabase.from('leads').update({
+            status: 'Interested',
+            notes: `📅 Booked a call for ${meetingTime}. ${lead.notes || ''}`,
+            last_action: new Date().toISOString().split('T')[0]
+          }).eq('id', lead.id);
+
+          // Log it as a message too
+          await supabase.from('messages').insert({
+            id: `booking_${Date.now()}`,
+            lead_id: lead.id,
+            type: 'email',
+            direction: 'inbound',
+            subject: 'Booked a call via Calendly',
+            content: `${name} booked a call for ${meetingTime}`,
+            status: 'received',
+            timestamp: new Date().toISOString()
+          });
+          console.log(`✓ Updated lead ${lead.name} → Interested (meeting booked)`);
+        } else {
+          console.log(`  No matching lead found for ${email}`);
+        }
+      }
+    }
+
+    res.json({ received: true });
+  } catch (error) {
+    console.error('Calendly webhook error:', error.message);
+    res.status(200).json({ received: true }); // always 200 so Calendly doesn't retry forever
   }
 });
 

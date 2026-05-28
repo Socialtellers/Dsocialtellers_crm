@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, MessageSquare, Send, Copy, Check, ChevronDown, User } from 'lucide-react';
 import { db } from '../../lib/store';
+import { settings } from '../../lib/settings';
 import { Button, Card, Badge, PageHeader, EmptyState } from '../ui';
 
 export default function OutreachPage({ selectedLead, onNavigate }) {
@@ -37,7 +38,8 @@ export default function OutreachPage({ selectedLead, onNavigate }) {
             to: recipient,
             subject: lead.email_subject,
             body: lead.email_body,
-            leadId: lead.id
+            leadId: lead.id,
+            calendlyLink: settings.getCalendly()
           })
         });
         const data = await res.json();
