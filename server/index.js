@@ -446,24 +446,31 @@ app.post('/api/send-email', async (req, res) => {
       cleanBody = cleanBody.replace(new RegExp(calendlyLink.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '').trim();
     }
 
-    // Build a styled button if we have a calendly link
+    // Build a styled button (no helper text)
     const bookButton = calendlyLink ? `
-      <div style="margin:24px 0;">
+      <div style="margin:20px 0;">
         <a href="${calendlyLink}" target="_blank"
            style="display:inline-block;background:#e8651e;color:#ffffff;text-decoration:none;
                   padding:14px 28px;border-radius:8px;font-weight:600;font-size:15px;
                   font-family:Arial,sans-serif;">
           📅 Book a Call
         </a>
-        <div style="font-size:12px;color:#888;margin-top:8px;font-family:Arial,sans-serif;">
-          Pick any time that works for you
-        </div>
       </div>` : '';
+
+    // Insert the button BEFORE the "Thanks" sign-off if present, else at the end
+    let bodyHtml = cleanBody.replace(/\n/g, '<br>');
+    if (bookButton) {
+      const signoffMatch = bodyHtml.match(/(<br>\s*)?Thanks,/i);
+      if (signoffMatch) {
+        bodyHtml = bodyHtml.replace(/(<br>\s*)?Thanks,/i, `${bookButton}<br>Thanks,`);
+      } else {
+        bodyHtml = bodyHtml + bookButton;
+      }
+    }
 
     const htmlBody = `
       <div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#333;max-width:560px;">
-        ${cleanBody.replace(/\n/g, '<br>')}
-        ${bookButton}
+        ${bodyHtml}
       </div>`;
 
     const info = await mailer.sendMail({

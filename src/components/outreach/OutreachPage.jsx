@@ -141,26 +141,37 @@ export default function OutreachPage({ selectedLead, onNavigate }) {
 
                 <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px' }}>
                   <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: 8 }}>BODY</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, whiteSpace: 'pre-line' }}>
-                    {settings.getCalendly()
-                      ? activeLead.email_body.replace(settings.getCalendly(), '').trim()
-                      : activeLead.email_body}
-                  </div>
-                  {settings.getCalendly() && (
-                    <div style={{ marginTop: 16 }}>
-                      <a href={settings.getCalendly()} target="_blank" rel="noreferrer"
-                        style={{
-                          display: 'inline-block', background: 'var(--accent-primary)', color: '#fff',
-                          textDecoration: 'none', padding: '12px 24px', borderRadius: 8,
-                          fontWeight: 600, fontSize: 14
-                        }}>
-                        📅 Book a Call
-                      </a>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
-                        Pick any time that works for you · this button appears in the sent email
+                  {(() => {
+                    const link = settings.getCalendly();
+                    let body = activeLead.email_body;
+                    if (link) body = body.replace(link, '').trim();
+
+                    // Split body at "Thanks," to place button before sign-off
+                    const idx = body.search(/Thanks,/i);
+                    const beforeSignoff = idx >= 0 ? body.slice(0, idx).trim() : body;
+                    const signoff = idx >= 0 ? body.slice(idx) : '';
+
+                    const BookButton = link ? (
+                      <div style={{ margin: '14px 0' }}>
+                        <a href={link} target="_blank" rel="noreferrer"
+                          style={{
+                            display: 'inline-block', background: 'var(--accent-primary)', color: '#fff',
+                            textDecoration: 'none', padding: '12px 24px', borderRadius: 8,
+                            fontWeight: 600, fontSize: 14
+                          }}>
+                          📅 Book a Call
+                        </a>
                       </div>
-                    </div>
-                  )}
+                    ) : null;
+
+                    return (
+                      <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                        <div style={{ whiteSpace: 'pre-line' }}>{beforeSignoff}</div>
+                        {BookButton}
+                        {signoff && <div style={{ whiteSpace: 'pre-line' }}>{signoff}</div>}
+                      </div>
+                    );
+                  })()}
                 </div>
               </Card>
             )}
