@@ -52,20 +52,29 @@ export default function OutreachPage({ selectedLead, onNavigate }) {
       return;
     }
 
-    // WhatsApp — still logs only (not yet wired to a provider)
-    const msg = {
-      id: `m_${Date.now()}`,
-      leadId: lead.id,
-      type,
-      direction: 'outbound',
-      subject: null,
-      content: lead.whatsapp_message,
-      timestamp: new Date().toISOString(),
-      status: 'delivered'
-    };
-    await db.addMessage(msg);
-    await db.updateLead(lead.id, { status: 'Contacted', channel: 'WhatsApp', last_action: new Date().toISOString().split('T')[0] });
-    alert(`WhatsApp marked as sent for ${lead.name} (WhatsApp sending not yet connected)`);
+    // WhatsApp — send via Meta Cloud API
+    let phone = lead.phone;
+    if (!phone) {
+      phone = window.prompt(`No phone number on file for ${lead.name}. Enter WhatsApp number (e.g. +971501234567):`);
+      if (!phone) return;
+    }
+    try {
+      const res = await fetch('http://localhost:3001/api/send-whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: phone,
+          message: lead.whatsapp_message,
+          leadId: lead.id
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Send failed');
+      await db.updateLead(lead.id, { status: 'Contacted', channel: 'WhatsApp', last_action: new Date().toISOString().split('T')[0] });
+      alert(`✓ WhatsApp sent to ${phone}`);
+    } catch (e) {
+      alert(`✗ WhatsApp failed: ${e.message}`);
+    }
   };
 
   return (
