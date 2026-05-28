@@ -117,11 +117,17 @@ STRICT RULES TO SOUND HUMAN:
 - Don't over-explain. Keep it tight.
 - One specific, real observation about THEIR business — like you actually looked at it.
 - Sound a little imperfect and casual, not polished and templated.
-- Never start with "I hope this email finds you well" or "I came across your business".
-- DO NOT use any personal name or sign-off. No "Best, [Name]", no "Regards", no signature at all. Just end on the message itself.
-- For WhatsApp: super casual, like texting. Lowercase is fine. 1-2 short lines.
-${calendlyLink ? `- Booking link: End with a low-pressure invite to book a quick call, and include this exact link naturally: ${calendlyLink}
-  Example phrasing: "if you're up for it, grab a quick slot here: ${calendlyLink}" — keep it casual, not pushy. Use the link in BOTH the email and the WhatsApp message.` : `- Low-pressure CTA, like a human asking. e.g. "worth a quick chat?" or "want me to show you what I mean?"`}
+- Never start with "I hope this email finds you well".
+
+EMAIL FORMAT:
+- Start with a greeting: "Hi ${lead.name}," (use the business name).
+- Then the body (your observation + how you can help).
+- End with a sign-off: "Thanks,\\nDsocialtellers"
+${calendlyLink ? `- Do NOT paste the raw booking link in the email body. A "Book a Call" button is added automatically, so just invite them to book (e.g. "if you're up for it, book a quick call below").` : ''}
+
+WHATSAPP FORMAT:
+- Super casual, like texting. Start with "Hi ${lead.name}!" then 1-2 short lines.
+${calendlyLink ? `- End the WhatsApp message with the booking link on its own line: ${calendlyLink}` : `- End with a casual ask like "worth a quick chat?"`}
 
 Output ONLY valid JSON.`;
 
@@ -132,15 +138,14 @@ What you noticed (the angle): ${strategy.hook}
 Their main problem: ${strategy.pain_point_focus}
 How you can help: ${strategy.offer_positioning}
 One real weakness you spotted: ${research.marketing_weaknesses?.[0] || 'weak online presence'}
-${calendlyLink ? `Booking link to include as the CTA: ${calendlyLink}` : ''}
 
-Write it like a real human reaching out, NOT a marketing template. No names, no sign-off.
+Write it like a real human reaching out, NOT a marketing template.
 
 Output JSON:
 {
   "email_subject": "short, curious subject like a human would write (no clickbait, no ALL CAPS)",
-  "email_body": "a genuine human email, 60-110 words, sounds like a real person typed it, one specific observation, casual ending${calendlyLink ? ' with the booking link as the CTA' : ''}, NO name or sign-off",
-  "whatsapp_message": "a casual human WhatsApp text, 1-2 short lines${calendlyLink ? ' ending with the booking link' : ''}, like texting, natural, max 1 emoji and only if it fits"
+  "email_body": "Starts with 'Hi ${lead.name},' then a genuine human email of 60-110 words, one specific observation, then ends with 'Thanks,\\nDsocialtellers'${calendlyLink ? '. Do NOT include the raw booking URL — invite them to book the call below.' : ''}",
+  "whatsapp_message": "Starts with 'Hi ${lead.name}!' then a casual 1-2 line text${calendlyLink ? `, ending with the booking link ${calendlyLink} on its own line` : ''}, natural, max 1 emoji"
 }`;
 
   const result = await callClaude(system, user, 600, MODELS.smart);
