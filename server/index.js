@@ -217,87 +217,40 @@ async function scrapeLinkedIn(query, location, limit = 5) {
   }));
 }
 
-// ─── Claude fallback (when Apify actor fails) ──────────────────────
-async function claudeFallback(query, location, source, limit = 5) {
-  console.log(`→ Using Claude fallback for ${source}`);
-  const safeLimit = Math.min(limit, 10); // cap to avoid token overflow
-  let text;
-  try {
-    text = await callClaude(
-    'Generate realistic UAE business lead data. Output ONLY a valid JSON array. No markdown.',
-    `Generate ${safeLimit} realistic "${query}" business leads in "${location}", UAE for source "${source}".
-Output ONLY this JSON array:
-[{
-  "id": "s1",
-  "name": "Business Name",
-  "website": "https://example.ae",
-  "instagram": "@handle",
-  "phone": "+971501234567",
-  "category": "${query}",
-  "location": "${location}",
-  "source": "${source}",
-  "status": "New",
-  "brand_quality": null,
-  "score": null,
-  "notes": "Scraped via ${source}",
-  "last_action": "${TODAY()}",
-  "tags": ["${query}"],
-  "createdAt": "${TODAY()}"
-}]`,
-      4000
-    );
-  } catch (e) {
-    console.error('  Claude call failed:', e.message);
-    throw new Error('Claude fallback failed: ' + e.message);
-  }
-  try {
-    // Extract JSON array even if wrapped in text
-    const match = text.match(/\[[\s\S]*\]/);
-    return JSON.parse(match ? match[0] : text);
-  } catch (e) {
-    console.error('  JSON parse failed. Raw:', text.slice(0, 200));
-    throw new Error('Could not parse leads from Claude response');
-  }
-}
-
 // ─── Scrape endpoint ───────────────────────────────────────────────
+// No fake data. If Apify is missing or fails, we return a real error.
 app.post('/api/scrape', async (req, res) => {
   const { query, location, source, limit = 5 } = req.body;
   console.log(`\n→ Scraping "${query}" in "${location}" via ${source}`);
 
   try {
-    if (!API_KEY) return res.status(500).json({ error: 'CLAUDE_API_KEY missing in .env' });
+    if (!APIFY_KEY) {
+      return res.status(400).json({
+        error: 'APIFY_API_KEY is not configured. Add it to your .env file to scrape real leads.'
+      });
+    }
 
     let leads = [];
 
-    // Try real Apify actor first, fall back to Claude simulation
-    if (APIFY_KEY && source === 'Google Maps') {
-      try {
-        leads = await scrapeGoogleMaps(query, location, limit);
-        console.log(`✓ Google Maps: ${leads.length} leads`);
-      } catch (e) {
-        console.log(`⚠ Google Maps failed (${e.message.slice(0,80)}), using Claude fallback`);
-        leads = await claudeFallback(query, location, source, limit);
-      }
-    } else if (APIFY_KEY && source === 'Instagram') {
-      try {
-        leads = await scrapeInstagram(query, location, limit);
-        console.log(`✓ Instagram: ${leads.length} leads`);
-      } catch (e) {
-        console.log(`⚠ Instagram failed (${e.message.slice(0,80)}), using Claude fallback`);
-        leads = await claudeFallback(query, location, source, limit);
-      }
-    } else if (APIFY_KEY && source === 'LinkedIn') {
-      try {
-        leads = await scrapeLinkedIn(query, location, limit);
-        console.log(`✓ LinkedIn: ${leads.length} leads`);
-      } catch (e) {
-        console.log(`⚠ LinkedIn failed (${e.message.slice(0,80)}), using Claude fallback`);
-        leads = await claudeFallback(query, location, source, limit);
-      }
+    if (source === 'Google Maps') {
+      leads = await scrapeGoogleMaps(query, location, limit);
+      console.log(`✓ Google Maps: ${leads.length} leads`);
+    } else if (source === 'Instagram') {
+      leads = await scrapeInstagram(query, location, limit);
+      console.log(`✓ Instagram: ${leads.length} leads`);
+    } else if (source === 'LinkedIn') {
+      leads = await scrapeLinkedIn(query, location, limit);
+      console.log(`✓ LinkedIn: ${leads.length} leads`);
     } else {
-      // No Apify key or Directories selected — use Claude
-      leads = await claudeFallback(query, location, source, limit);
+      return res.status(400).json({
+        error: `Source "${source}" is not supported. Use Google Maps, Instagram, or LinkedIn.`
+      });
+    }
+
+    if (leads.length === 0) {
+      return res.status(404).json({
+        error: `No leads found for "${query}" in "${location}" on ${source}. Try a different search.`
+      });
     }
 
     console.log(`✓ Total leads returned: ${leads.length}`);
@@ -542,6 +495,20 @@ app.patch('/api/leads/:id', async (req, res) => {
   }
 });
 
+// DELETE a lead
+app.delete('/api/leads/:id', async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: 'Supabase not configured' });
+  try {
+    const { error } = await supabase.from('leads').delete().eq('id', req.params.id);
+    if (error) throw error;
+    console.log(`✓ Deleted lead ${req.params.id}`);
+    res.json({ deleted: true });
+  } catch (e) {
+    console.error('Delete lead error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // GET messages for a lead
 app.get('/api/messages/:leadId', async (req, res) => {
   if (!supabase) return res.json([]);
@@ -732,10 +699,9 @@ app.get('/api/health', (req, res) => {
     supabase: supabase ? '✓ connected' : '✗ not configured',
     gmail: mailer ? '✓ configured' : '✗ not configured',
     platforms: {
-      google_maps: '✓ real Apify actor',
-      instagram: '✓ real Apify actor',
-      linkedin: '✓ real Apify actor',
-      directories: 'Claude simulation'
+      google_maps: APIFY_KEY ? '✓ real Apify actor' : '✗ requires APIFY_API_KEY',
+      instagram:   APIFY_KEY ? '✓ real Apify actor' : '✗ requires APIFY_API_KEY',
+      linkedin:    APIFY_KEY ? '✓ real Apify actor' : '✗ requires APIFY_API_KEY',
     }
   });
 });
@@ -746,5 +712,5 @@ app.listen(PORT, () => {
   console.log(`   Apify:    ${APIFY_KEY ? '✓' : '✗ missing'}`);
   console.log(`   Supabase: ${supabase ? '✓ connected' : '✗ not configured'}`);
   console.log(`   Gmail:    ${mailer ? '✓ configured' : '✗ not configured'}`);
-  console.log(`   Platforms: Google Maps | Instagram | LinkedIn | Directories\n`);
+  console.log(`   Platforms: Google Maps | Instagram | LinkedIn (real Apify actors only)\n`);
 });
