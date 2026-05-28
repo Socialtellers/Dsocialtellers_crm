@@ -578,6 +578,163 @@ app.post('/api/messages', async (req, res) => {
 });
 
 // ════════════════════════════════════════════════════════════════
+// WHATSAPP (Meta Cloud API)
+// ════════════════════════════════════════════════════════════════
+
+const WA_PHONE_ID    = process.env.WHATSAPP_PHONE_NUMBER_ID;
+const WA_TOKEN       = process.env.WHATSAPP_ACCESS_TOKEN;
+const WA_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || 'dsocialtellers2024';
+
+if (WA_PHONE_ID && WA_TOKEN) {
+  console.log('✓ WhatsApp configured');
+} else {
+  console.log('⚠ WhatsApp not configured — add WHATSAPP_PHONE_NUMBER_ID + WHATSAPP_ACCESS_TOKEN to .env');
+}
+
+// Send a WhatsApp text message
+async function sendWhatsAppMessage(to, message) {
+  // Normalise number: strip spaces/dashes, ensure + prefix
+  let phone = to.replace(/[\s\-().]/g, '');
+  if (!phone.startsWith('+')) phone = '+' + phone;
+
+  const res = await fetch(
+    `https://graph.facebook.com/v19.0/${WA_PHONE_ID}/messages`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${WA_TOKEN}`
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: phone,
+        type: 'text',
+        text: { body: message }
+      })
+    }
+  );
+  const data = await res.json();
+  if (!res.ok) throw new Error(JSON.stringify(data.error || data));
+  return data;
+}
+
+// ── Send WhatsApp endpoint ─────────────────────────────────────
+app.post('/api/send-whatsapp', async (req, res) => {
+  const { to, message, leadId } = req.body;
+  console.log(`\n→ Sending WhatsApp to ${to}`);
+
+  if (!WA_PHONE_ID || !WA_TOKEN) {
+    return res.status(500).json({ error: 'WhatsApp not configured. Add WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN to .env' });
+  }
+  if (!to) return res.status(400).json({ error: 'No phone number provided' });
+  if (!message) return res.status(400).json({ error: 'No message provided' });
+
+  try {
+    const result = await sendWhatsAppMessage(to, message);
+    console.log(`✓ WhatsApp sent: ${result.messages?.[0]?.id}`);
+
+    // Log to Supabase
+    if (supabase && leadId) {
+      await supabase.from('messages').insert({
+        id: `wa_${Date.now()}`,
+        lead_id: leadId,
+        type: 'whatsapp',
+        direction: 'outbound',
+        subject: null,
+        content: message,
+        status: 'sent',
+        timestamp: new Date().toISOString()
+      });
+      await supabase.from('leads').update({
+        status: 'Contacted',
+        channel: 'WhatsApp',
+        last_action: TODAY()
+      }).eq('id', leadId);
+    }
+
+    res.json({ success: true, messageId: result.messages?.[0]?.id });
+  } catch (error) {
+    console.error('✗ WhatsApp error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── Webhook — Meta verification + incoming messages ────────────
+app.get('/api/whatsapp-webhook', (req, res) => {
+  const mode  = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+  if (mode === 'subscribe' && token === WA_VERIFY_TOKEN) {
+    console.log('✓ WhatsApp webhook verified');
+    return res.status(200).send(challenge);
+  }
+  res.sendStatus(403);
+});
+
+app.post('/api/whatsapp-webhook', async (req, res) => {
+  res.sendStatus(200); // always ack immediately so Meta doesn't retry
+  try {
+    const body = req.body;
+    if (body.object !== 'whatsapp_business_account') return;
+
+    for (const entry of body.entry || []) {
+      for (const change of entry.changes || []) {
+        const value = change.value;
+        if (!value?.messages) continue;
+
+        for (const msg of value.messages) {
+          if (msg.type !== 'text') continue;
+
+          const fromPhone = msg.from; // e.g. "971501234567"
+          const incomingText = msg.text?.body || '';
+          const timestamp = new Date(parseInt(msg.timestamp) * 1000).toISOString();
+
+          console.log(`\n📱 WhatsApp reply from ${fromPhone}: "${incomingText}"`);
+
+          // Find matching lead by phone
+          let matchedLead = null;
+          if (supabase) {
+            const { data: leads } = await supabase.from('leads').select('*');
+            matchedLead = leads?.find(l => {
+              if (!l.phone) return false;
+              const clean = l.phone.replace(/[\s\-().+]/g, '');
+              return fromPhone.endsWith(clean) || clean.endsWith(fromPhone);
+            });
+          }
+
+          if (matchedLead) {
+            console.log(`  Matched lead: ${matchedLead.name}`);
+            // Log the inbound message
+            if (supabase) {
+              await supabase.from('messages').insert({
+                id: `wa_in_${Date.now()}`,
+                lead_id: matchedLead.id,
+                type: 'whatsapp',
+                direction: 'inbound',
+                subject: null,
+                content: incomingText,
+                status: 'received',
+                timestamp
+              });
+              // Update lead status to Replied
+              await supabase.from('leads').update({
+                status: 'Replied',
+                last_action: TODAY()
+              }).eq('id', matchedLead.id);
+              console.log(`  Updated ${matchedLead.name} → Replied`);
+            }
+          } else {
+            console.log(`  No matching lead found for ${fromPhone}`);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('WhatsApp webhook error:', err.message);
+  }
+});
+
+// ════════════════════════════════════════════════════════════════
 // EMAIL SENDING (Gmail via nodemailer)
 // ════════════════════════════════════════════════════════════════
 
@@ -727,6 +884,7 @@ app.get('/api/health', (req, res) => {
     apify: APIFY_KEY ? '✓ configured' : '✗ missing',
     supabase: supabase ? '✓ connected' : '✗ not configured',
     gmail: mailer ? '✓ configured' : '✗ not configured',
+    whatsapp: (WA_PHONE_ID && WA_TOKEN) ? '✓ configured' : '✗ not configured',
     platforms: {
       google_maps: APIFY_KEY ? '✓ real Apify actor' : '✗ requires APIFY_API_KEY',
       instagram:   APIFY_KEY ? '✓ real Apify actor' : '✗ requires APIFY_API_KEY',
