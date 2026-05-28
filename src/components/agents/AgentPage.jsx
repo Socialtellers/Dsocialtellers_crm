@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Bot, Search, FlaskConical, PenTool, Database, Zap, Play, CheckCircle, AlertCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { Bot, Search, FlaskConical, PenTool, Database, Zap, Play, CheckCircle, AlertCircle, Clock, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import { db } from '../../lib/store';
 import { runFullPipeline, scrapeLeads } from '../../agents/pipeline';
+import { settings } from '../../lib/settings';
 import { Button, Card, Input, Select, Spinner, Badge, PageHeader } from '../ui';
 
 const AGENTS = [
@@ -25,6 +26,7 @@ export default function AgentPage({ onNavigate }) {
   const [batchLogs, setBatchLogs] = useState([]);
 
   const [expandedAgent, setExpandedAgent] = useState(null);
+  const [calendly, setCalendly] = useState(settings.getCalendly());
 
   const runScrape = async () => {
     if (!scrapeQuery.trim()) return;
@@ -71,7 +73,7 @@ export default function AgentPage({ onNavigate }) {
       try {
         await runFullPipeline(lead, (p) => {
           setBatchProgress(prev => prev.map(pp => pp.id === lead.id ? { ...pp, pct: p.pct, step: p.step } : pp));
-        });
+        }, settings.getCalendly());
         const updated = db.getLead(lead.id);
         setBatchProgress(prev => prev.map(p => p.id === lead.id ? { ...p, status: 'done', pct: 100, step: 'Complete' } : p));
         setBatchLogs(l => [...l, { msg: `  ✓ ${lead.name} — copy generated, status: Contacted`, type: 'success' }]);
@@ -138,6 +140,35 @@ export default function AgentPage({ onNavigate }) {
             }} className="animate-fadeIn">
               <strong style={{ color: 'var(--text-primary)' }}>{AGENTS.find(a => a.id === expandedAgent)?.label}:</strong>
               {' '}{AGENTS.find(a => a.id === expandedAgent)?.desc}
+            </div>
+          )}
+        </Card>
+
+        {/* Calendly booking link setting */}
+        <Card style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 7, background: 'rgba(232,101,30,0.1)', border: '1px solid rgba(232,101,30,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Calendar size={13} color="var(--accent-primary)" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Calendly Booking Link</div>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Added automatically to every email & WhatsApp message as the booking CTA</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <Input
+              value={calendly}
+              onChange={e => setCalendly(e.target.value)}
+              placeholder="https://calendly.com/yourname/30min"
+              style={{ flex: 1 }}
+            />
+            <Button onClick={() => { settings.setCalendly(calendly); alert('Calendly link saved! It will be added to new outreach.'); }}>
+              Save
+            </Button>
+          </div>
+          {calendly && (
+            <div style={{ fontSize: 11, color: 'var(--accent-green)', marginTop: 8, fontFamily: 'var(--font-mono)' }}>
+              ✓ Active — booking link will appear in generated messages
             </div>
           )}
         </Card>

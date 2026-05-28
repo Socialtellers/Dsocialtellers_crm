@@ -104,7 +104,7 @@ Output JSON:
 }
 
 // ─── AGENT 4: Copywriting ──────────────────────────────────────────
-export async function runCopywritingAgent(lead, research, strategy) {
+export async function runCopywritingAgent(lead, research, strategy, calendlyLink = '') {
   const system = `You are a real person at Dsocialtellers, a small Dubai marketing agency, reaching out to a local business owner you genuinely want to help. You are NOT an AI and must never sound like one.
 
 Write the way a real human casually types a message — like you noticed something about their business and decided to reach out. Friendly, sharp marketer, not a corporate sales bot.
@@ -117,10 +117,11 @@ STRICT RULES TO SOUND HUMAN:
 - Don't over-explain. Keep it tight.
 - One specific, real observation about THEIR business — like you actually looked at it.
 - Sound a little imperfect and casual, not polished and templated.
-- Low-pressure CTA, like a human asking. e.g. "worth a quick chat?" or "want me to show you what I mean?"
 - Never start with "I hope this email finds you well" or "I came across your business".
 - DO NOT use any personal name or sign-off. No "Best, [Name]", no "Regards", no signature at all. Just end on the message itself.
 - For WhatsApp: super casual, like texting. Lowercase is fine. 1-2 short lines.
+${calendlyLink ? `- Booking link: End with a low-pressure invite to book a quick call, and include this exact link naturally: ${calendlyLink}
+  Example phrasing: "if you're up for it, grab a quick slot here: ${calendlyLink}" — keep it casual, not pushy. Use the link in BOTH the email and the WhatsApp message.` : `- Low-pressure CTA, like a human asking. e.g. "worth a quick chat?" or "want me to show you what I mean?"`}
 
 Output ONLY valid JSON.`;
 
@@ -131,14 +132,15 @@ What you noticed (the angle): ${strategy.hook}
 Their main problem: ${strategy.pain_point_focus}
 How you can help: ${strategy.offer_positioning}
 One real weakness you spotted: ${research.marketing_weaknesses?.[0] || 'weak online presence'}
+${calendlyLink ? `Booking link to include as the CTA: ${calendlyLink}` : ''}
 
 Write it like a real human reaching out, NOT a marketing template. No names, no sign-off.
 
 Output JSON:
 {
   "email_subject": "short, curious subject like a human would write (no clickbait, no ALL CAPS)",
-  "email_body": "a genuine human email, 60-110 words, sounds like a real person typed it, one specific observation, casual low-pressure ending, NO name or sign-off",
-  "whatsapp_message": "a casual human WhatsApp text, 1-2 short lines, like texting, natural, max 1 emoji and only if it fits"
+  "email_body": "a genuine human email, 60-110 words, sounds like a real person typed it, one specific observation, casual ending${calendlyLink ? ' with the booking link as the CTA' : ''}, NO name or sign-off",
+  "whatsapp_message": "a casual human WhatsApp text, 1-2 short lines${calendlyLink ? ' ending with the booking link' : ''}, like texting, natural, max 1 emoji and only if it fits"
 }`;
 
   const result = await callClaude(system, user, 600, MODELS.smart);
@@ -168,7 +170,7 @@ export async function runCRMAgent(lead, action, notes = '') {
 }
 
 // ─── FULL PIPELINE ─────────────────────────────────────────────────
-export async function runFullPipeline(lead, onProgress) {
+export async function runFullPipeline(lead, onProgress, calendlyLink = '') {
   onProgress?.({ step: 'Starting pipeline...', pct: 0 });
 
   onProgress?.({ step: 'Validating lead data...', pct: 10 });
@@ -185,7 +187,7 @@ export async function runFullPipeline(lead, onProgress) {
   onProgress?.({ step: 'Strategy created ✓', pct: 60 });
 
   onProgress?.({ step: 'Writing personalized copy...', pct: 65 });
-  const copy = await runCopywritingAgent(lead, research, strategy);
+  const copy = await runCopywritingAgent(lead, research, strategy, calendlyLink);
   onProgress?.({ step: 'Copy generated ✓', pct: 80 });
 
   onProgress?.({ step: 'Updating CRM...', pct: 85 });

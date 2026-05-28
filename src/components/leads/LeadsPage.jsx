@@ -3,6 +3,7 @@ import { Search, Filter, Plus, Globe, Instagram, Phone, MapPin, X, Mail, Message
 import { db, CRM_STATUSES, STATUS_COLORS } from '../../lib/store';
 import { StatusBadge, QualityBadge, ScorePill, Badge, Card, Button, Input, Select, Tag, PageHeader, EmptyState } from '../ui';
 import { runFullPipeline } from '../../agents/pipeline';
+import { settings } from '../../lib/settings';
 
 export default function LeadsPage({ onNavigate, selectedLead: initLead }) {
   const [leads, setLeads] = useState(db.getLeads());
@@ -26,7 +27,7 @@ export default function LeadsPage({ onNavigate, selectedLead: initLead }) {
     setRunning(true);
     setProgress({ step: 'Initializing...', pct: 0 });
     try {
-      const result = await runFullPipeline(lead, (p) => setProgress(p));
+      const result = await runFullPipeline(lead, (p) => setProgress(p), settings.getCalendly());
       db.updateLead(lead.id, {
         ...result.research,
         ...result.copy,
