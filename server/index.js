@@ -185,16 +185,14 @@ async function scrapeGoogleMaps(query, location, limit = 5, minRating = null, ma
     createdAt: TODAY()
   }));
 
-  // Apply rating filter if provided
-  if (minRating !== null && maxRating !== null) {
-    mapped = mapped.filter(l => {
-      const r = parseFloat(l.rating || 0);
-      return r >= minRating && r <= maxRating;
-    });
-    console.log(`  After rating filter (${minRating}-${maxRating}★): ${mapped.length} leads found`);
-    if (mapped.length === 0) {
-      throw new Error(`No businesses found with rating between ${minRating} and ${maxRating} stars for "${query}" in ${location}. Try a different search or remove the rating filter.`);
-    }
+  // Always filter to 3.0–3.9 stars only — our target range
+  mapped = mapped.filter(l => {
+    const r = parseFloat(l.rating || 0);
+    return r >= 3.0 && r <= 3.9;
+  });
+  console.log(`  After rating filter (3.0–3.9★): ${mapped.length} leads found`);
+  if (mapped.length === 0) {
+    throw new Error(`No businesses found with rating between 3.0 and 3.9 stars for "${query}" in ${location}. Try a different category or increase the count.`);
   }
 
   // Return only the requested limit
