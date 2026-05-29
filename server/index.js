@@ -166,24 +166,37 @@ async function scrapeGoogleMaps(query, location, limit = 5, minRating = null, ma
     language: 'en',
   }, fetchLimit);
 
-  let mapped = results.map((p, i) => ({
-    id: `gmap_${Date.now()}_${i}`,
-    name: cleanName(p.title),
-    website: p.website || null,
-    instagram: null,
-    phone: p.phone || p.phoneUnformatted || null,
-    category: p.categoryName || query,
-    location: p.neighborhood || p.city || location,
-    source: 'Google Maps',
-    status: 'New',
-    brand_quality: null,
-    score: null,
-    rating: p.totalScore || null,
-    notes: `Rating: ${p.totalScore || 'N/A'} ⭐ | Reviews: ${p.reviewsCount || 0} | ${p.address || ''}`.trim(),
-    last_action: TODAY(),
-    tags: [query, 'Google Maps'],
-    createdAt: TODAY()
-  }));
+  // Debug: log first result to see actual field names
+  if (results.length > 0) {
+    const sample = results[0];
+    console.log(`  Sample result keys: ${Object.keys(sample).join(', ')}`);
+    console.log(`  Sample rating fields: totalScore=${sample.totalScore}, rating=${sample.rating}, stars=${sample.stars}, averageRating=${sample.averageRating}`);
+  }
+
+  let mapped = results.map((p, i) => {
+    // Try all possible rating field names from Apify
+    const rating = p.totalScore || p.rating || p.stars || p.averageRating || p.reviewsRating || null;
+    return {
+      id: `gmap_${Date.now()}_${i}`,
+      name: cleanName(p.title),
+      website: p.website || null,
+      instagram: null,
+      phone: p.phone || p.phoneUnformatted || null,
+      category: p.categoryName || query,
+      location: p.neighborhood || p.city || location,
+      source: 'Google Maps',
+      status: 'New',
+      brand_quality: null,
+      score: null,
+      rating: rating,
+      notes: `Rating: ${rating || 'N/A'} ⭐ | Reviews: ${p.reviewsCount || p.reviewCount || 0} | ${p.address || ''}`.trim(),
+      last_action: TODAY(),
+      tags: [query, 'Google Maps'],
+      createdAt: TODAY()
+    };
+  });
+
+  console.log(`  Ratings found: ${mapped.map(l => l.rating).join(', ')}`);
 
   // Always filter to 3.0–3.9 stars only — our target range
   mapped = mapped.filter(l => {
