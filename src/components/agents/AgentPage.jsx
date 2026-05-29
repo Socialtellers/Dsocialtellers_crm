@@ -63,34 +63,57 @@ export default function AgentPage({ onNavigate }) {
     }
     setBatchRunning(true);
     setBatchProgress([]);
-    setBatchLogs([{ msg: `Starting batch pipeline for ${newLeads.length} leads...`, type: 'info' }]);
+    setBatchLogs([{ msg: `Starting batch — Phase 1: Research all ${newLeads.length} leads...`, type: 'info' }]);
 
+    const BACKEND = import.meta.env.VITE_BACKEND_URL || '';
+
+    // ── Phase 1: Research all leads ──────────────────────────────────
+    const researched = [];
     for (let i = 0; i < newLeads.length; i++) {
       const lead = newLeads[i];
-      setBatchProgress(prev => [...prev.filter(p => p.id !== lead.id), { id: lead.id, name: lead.name, status: 'running', pct: 0, step: 'Starting...' }]);
-      setBatchLogs(l => [...l, { msg: `[${i+1}/${newLeads.length}] Processing: ${lead.name}`, type: 'info' }]);
-
+      setBatchProgress(prev => [...prev.filter(p => p.id !== lead.id), { id: lead.id, name: lead.name, status: 'running', pct: 20, step: 'Researching...' }]);
+      setBatchLogs(l => [...l, { msg: `[${i+1}/${newLeads.length}] Researching: ${lead.name}`, type: 'info' }]);
       try {
-        await runFullPipeline(lead, async (p) => {
-          setBatchProgress(prev => prev.map(pp => pp.id === lead.id ? { ...pp, pct: p.pct, step: p.step } : pp));
-          // Set Researched status mid-pipeline
-          if (p.statusUpdate === 'Researched') {
-            await db.updateLead(lead.id, { status: 'Researched', last_action: new Date().toISOString().split('T')[0] });
-            setBatchLogs(l => [...l, { msg: `  📋 ${lead.name} — researched`, type: 'info' }]);
-          }
-        }, settings.getCalendly());
-        await db.updateLead(lead.id, { status: 'Contacted', last_action: new Date().toISOString().split('T')[0] });
-        setBatchProgress(prev => prev.map(p => p.id === lead.id ? { ...p, status: 'done', pct: 100, step: 'Complete' } : p));
-        setBatchLogs(l => [...l, { msg: `  ✓ ${lead.name} — copy generated, status: Contacted`, type: 'success' }]);
+        const res = await fetch(`${BACKEND}/api/research`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(lead)
+        });
+        const research = await res.json();
+        await db.updateLead(lead.id, { ...research, status: 'Researched', last_action: new Date().toISOString().split('T')[0] });
+        researched.push({ ...lead, ...research, status: 'Researched' });
+        setBatchProgress(prev => prev.map(p => p.id === lead.id ? { ...p, pct: 50, step: 'Researched ✓' } : p));
+        setBatchLogs(l => [...l, { msg: `  📋 ${lead.name} — researched`, type: 'info' }]);
       } catch (e) {
         setBatchProgress(prev => prev.map(p => p.id === lead.id ? { ...p, status: 'error', step: e.message } : p));
         setBatchLogs(l => [...l, { msg: `  ✗ ${lead.name} — ${e.message}`, type: 'error' }]);
       }
-
       await new Promise(r => setTimeout(r, 500));
     }
 
-    setBatchLogs(l => [...l, { msg: `Batch complete. Processed ${newLeads.length} leads.`, type: 'success' }]);
+    setBatchLogs(l => [...l, { msg: `Phase 1 complete. ${researched.length} leads researched. Starting Phase 2: Generate outreach...`, type: 'info' }]);
+
+    // ── Phase 2: Generate outreach for all researched leads ──────────
+    for (let i = 0; i < researched.length; i++) {
+      const lead = researched[i];
+      setBatchProgress(prev => prev.map(p => p.id === lead.id ? { ...p, pct: 60, step: 'Generating copy...' } : p));
+      setBatchLogs(l => [...l, { msg: `[${i+1}/${researched.length}] Generating outreach: ${lead.name}`, type: 'info' }]);
+      try {
+        const { runStrategyAgent, runCopywritingAgent } = await import('../agents/pipeline.js');
+        const research = { marketing_weaknesses: lead.marketing_weaknesses, growth_opportunities: lead.growth_opportunities, brand_quality: lead.brand_quality, tone: lead.tone };
+        const strategy = await runStrategyAgent(lead, research);
+        const copy = await runCopywritingAgent(lead, research, strategy, settings.getCalendly());
+        await db.updateLead(lead.id, { ...copy, status: 'Contacted', last_action: new Date().toISOString().split('T')[0] });
+        setBatchProgress(prev => prev.map(p => p.id === lead.id ? { ...p, status: 'done', pct: 100, step: 'Complete ✓' } : p));
+        setBatchLogs(l => [...l, { msg: `  ✓ ${lead.name} — outreach generated`, type: 'success' }]);
+      } catch (e) {
+        setBatchProgress(prev => prev.map(p => p.id === lead.id ? { ...p, status: 'error', step: e.message } : p));
+        setBatchLogs(l => [...l, { msg: `  ✗ ${lead.name} — ${e.message}`, type: 'error' }]);
+      }
+      await new Promise(r => setTimeout(r, 500));
+    }
+
+    setBatchLogs(l => [...l, { msg: `Batch complete. ${researched.length} leads processed.`, type: 'success' }]);
     setBatchRunning(false);
   };
 
