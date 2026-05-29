@@ -513,8 +513,9 @@ app.patch('/api/leads/:id', async (req, res) => {
   if (!supabase) return res.status(500).json({ error: 'Supabase not configured' });
   try {
     const updates = { ...req.body };
-    delete updates.createdAt;
-    delete updates.id;
+    // Strip fields that don't exist in the Supabase schema
+    const INVALID_FIELDS = ['createdAt', 'id', 'data_source', 'leadId'];
+    INVALID_FIELDS.forEach(f => delete updates[f]);
     const { data, error } = await supabase.from('leads').update(updates).eq('id', req.params.id).select();
     if (error) throw error;
     res.json(data[0] ? rowToLead(data[0]) : null);
