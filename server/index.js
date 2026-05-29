@@ -156,11 +156,15 @@ async function runApifyActor(actorId, input, limit = 5) {
 // ─── Platform scrapers ─────────────────────────────────────────────
 
 async function scrapeGoogleMaps(query, location, limit = 5, minRating = null, maxRating = null) {
+  // If rating filter is active, scrape 4x more to ensure we get enough after filtering
+  const fetchLimit = (minRating !== null && maxRating !== null) ? Math.min(limit * 4, 50) : limit;
+  console.log(`  Fetching ${fetchLimit} places from Apify (need ${limit} after rating filter)`);
+
   const results = await runApifyActor('compass~crawler-google-places', {
     searchStringsArray: [`${query} in ${location}`],
-    maxCrawledPlacesPerSearch: limit,
+    maxCrawledPlacesPerSearch: fetchLimit,
     language: 'en',
-  }, limit);
+  }, fetchLimit);
 
   let mapped = results.map((p, i) => ({
     id: `gmap_${Date.now()}_${i}`,
@@ -187,10 +191,14 @@ async function scrapeGoogleMaps(query, location, limit = 5, minRating = null, ma
       const r = parseFloat(l.rating || 0);
       return r >= minRating && r <= maxRating;
     });
-    console.log(`  After rating filter (${minRating}-${maxRating}★): ${mapped.length} leads`);
+    console.log(`  After rating filter (${minRating}-${maxRating}★): ${mapped.length} leads found`);
+    if (mapped.length === 0) {
+      throw new Error(`No businesses found with rating between ${minRating} and ${maxRating} stars for "${query}" in ${location}. Try a different search or remove the rating filter.`);
+    }
   }
 
-  return mapped;
+  // Return only the requested limit
+  return mapped.slice(0, limit);
 }
 
 async function scrapeInstagram(query, location, limit = 5) {
