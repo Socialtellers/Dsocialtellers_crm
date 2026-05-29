@@ -183,11 +183,12 @@ async function scrapeGoogleMaps(query, location, limit = 5) {
 
 async function scrapeInstagram(query, location, limit = 5) {
   // Use Instagram search scraper to find business accounts by keyword
+  // Search by username keyword, get profile details
   const results = await runApifyActor('apify~instagram-scraper', {
     search: `${query} ${location}`,
     searchType: 'user',
     searchLimit: limit,
-    resultsType: 'profiles',
+    resultsType: 'details',
     resultsLimit: limit,
   }, limit);
   console.log(`  Instagram raw profiles: ${results.length}`);
