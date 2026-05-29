@@ -156,9 +156,10 @@ async function runApifyActor(actorId, input, limit = 5) {
 // ─── Platform scrapers ─────────────────────────────────────────────
 
 async function scrapeGoogleMaps(query, location, limit = 5, minRating = null, maxRating = null) {
-  // If rating filter is active, scrape 4x more to ensure we get enough after filtering
-  const fetchLimit = (minRating !== null && maxRating !== null) ? Math.min(limit * 4, 50) : limit;
-  console.log(`  Fetching ${fetchLimit} places from Apify (need ${limit} after rating filter)`);
+  // Google Maps returns highest-rated places first.
+  // To find 3.0-3.9 star businesses we need to scrape a large batch and filter.
+  const fetchLimit = 200;
+  console.log(`  Fetching ${fetchLimit} places from Apify to find ${limit} with 3.0-3.9 stars`);
 
   const results = await runApifyActor('compass~crawler-google-places', {
     searchStringsArray: [`${query} in ${location}`],
