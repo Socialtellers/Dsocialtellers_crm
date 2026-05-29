@@ -31,7 +31,7 @@ export default function OutreachPage({ selectedLead, onNavigate }) {
         if (!recipient) return;
       }
       try {
-        const res = await fetch('http://localhost:3001/api/send-email', {
+        const res = await fetch((import.meta.env.VITE_BACKEND_URL || '') + '/api/send-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -59,7 +59,7 @@ export default function OutreachPage({ selectedLead, onNavigate }) {
       if (!phone) return;
     }
     try {
-      const res = await fetch('http://localhost:3001/api/send-whatsapp', {
+      const res = await fetch((import.meta.env.VITE_BACKEND_URL || '') + '/api/send-whatsapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
