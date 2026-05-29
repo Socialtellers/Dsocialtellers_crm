@@ -27,19 +27,17 @@ export default function LeadsPage({ onNavigate, selectedLead: initLead }) {
 
   const runResearch = async (lead) => {
     setRunning('research');
-    setProgress({ step: 'Initializing...', pct: 0 });
+    setProgress({ step: 'Researching business...', pct: 20 });
     try {
-      setProgress({ step: 'Validating lead...', pct: 10 });
-      const { runValidationAgent, runResearchAgent } = await import('../agents/pipeline.js').catch(() => ({ runValidationAgent: null, runResearchAgent: null }));
-      const { runFullPipeline: rfp } = await import('../agents/pipeline.js');
-
-      // Run only research part
       const response = await fetch((import.meta.env.VITE_BACKEND_URL || '') + '/api/research', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(lead)
       });
-      if (!response.ok) throw new Error('Research failed');
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Research failed');
+      }
       const research = await response.json();
       setProgress({ step: 'Research complete ✓', pct: 100 });
 
@@ -54,7 +52,7 @@ export default function LeadsPage({ onNavigate, selectedLead: initLead }) {
       setProgress({ step: `Error: ${e.message}`, pct: 0, error: true });
     } finally {
       setRunning(false);
-      setTimeout(() => setProgress(null), 3000);
+      setTimeout(() => setProgress(null), 4000);
     }
   };
 
