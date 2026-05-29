@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Globe, Instagram, Phone, MapPin, X, Mail, ChevronRight, Trash2, RefreshCw, Pencil, Check, Plus, Star } from 'lucide-react';
+import { Search, Globe, Instagram, Phone, MapPin, X, Mail, ChevronRight, Trash2, RefreshCw, Pencil, Check, Plus, Star, Send } from 'lucide-react';
 import { db, CRM_STATUSES, STATUS_COLORS } from '../../lib/store';
 import { StatusBadge, QualityBadge, ScorePill, Badge, Card, Button, Input, Select, Tag, PageHeader, EmptyState } from '../ui';
 import { runFullPipeline } from '../../agents/pipeline';
@@ -25,22 +25,88 @@ export default function LeadsPage({ onNavigate, selectedLead: initLead }) {
     return matchSearch && matchStatus && matchQuality;
   });
 
+  const runResearch = async (lead) => {
+    setRunning('research');
+    setProgress({ step: 'Initializing...', pct: 0 });
+    try {
+      setProgress({ step: 'Validating lead...', pct: 10 });
+      const { runValidationAgent, runResearchAgent } = await import('../agents/pipeline.js').catch(() => ({ runValidationAgent: null, runResearchAgent: null }));
+      const { runFullPipeline: rfp } = await import('../agents/pipeline.js');
+
+      // Run only research part
+      const response = await fetch((import.meta.env.VITE_BACKEND_URL || '') + '/api/research', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lead)
+      });
+      if (!response.ok) throw new Error('Research failed');
+      const research = await response.json();
+      setProgress({ step: 'Research complete ✓', pct: 100 });
+
+      await db.updateLead(lead.id, {
+        ...research,
+        status: 'Researched',
+        last_action: new Date().toISOString().split('T')[0]
+      });
+      refresh();
+      setSelected(db.getLead(lead.id));
+    } catch (e) {
+      setProgress({ step: `Error: ${e.message}`, pct: 0, error: true });
+    } finally {
+      setRunning(false);
+      setTimeout(() => setProgress(null), 3000);
+    }
+  };
+
+  const runOutreach = async (lead) => {
+    setRunning('outreach');
+    setProgress({ step: 'Building strategy...', pct: 10 });
+    try {
+      const { runStrategyAgent, runCopywritingAgent } = await import('../agents/pipeline.js');
+
+      // Use research data already saved on the lead
+      const research = {
+        marketing_weaknesses: lead.marketing_weaknesses || [],
+        growth_opportunities: lead.growth_opportunities || [],
+        brand_quality: lead.brand_quality,
+        tone: lead.tone,
+        business_summary: lead.business_summary
+      };
+
+      setProgress({ step: 'Building strategy...', pct: 30 });
+      const strategy = await runStrategyAgent(lead, research);
+
+      setProgress({ step: 'Writing copy...', pct: 60 });
+      const copy = await runCopywritingAgent(lead, research, strategy, settings.getCalendly());
+
+      setProgress({ step: 'Saving...', pct: 90 });
+      await db.updateLead(lead.id, {
+        ...copy,
+        status: 'Contacted',
+        last_action: new Date().toISOString().split('T')[0]
+      });
+      setProgress({ step: 'Done ✓', pct: 100 });
+      refresh();
+      setSelected(db.getLead(lead.id));
+    } catch (e) {
+      setProgress({ step: `Error: ${e.message}`, pct: 0, error: true });
+    } finally {
+      setRunning(false);
+      setTimeout(() => setProgress(null), 3000);
+    }
+  };
+
   const runPipeline = async (lead) => {
-    setRunning(true);
+    setRunning('full');
     setProgress({ step: 'Initializing...', pct: 0 });
     try {
       const result = await runFullPipeline(lead, async (p) => {
         setProgress(p);
-        // Set status to Researched mid-pipeline as soon as research is done
         if (p.statusUpdate === 'Researched') {
-          await db.updateLead(lead.id, {
-            status: 'Researched',
-            last_action: new Date().toISOString().split('T')[0]
-          });
+          await db.updateLead(lead.id, { status: 'Researched', last_action: new Date().toISOString().split('T')[0] });
           refresh();
         }
       }, settings.getCalendly());
-      // Final update — save all research + copy + set Contacted
       await db.updateLead(lead.id, {
         ...result.research,
         ...result.copy,
@@ -195,6 +261,8 @@ export default function LeadsPage({ onNavigate, selectedLead: initLead }) {
             lead={selected}
             onClose={() => setSelected(null)}
             onRunPipeline={runPipeline}
+            onRunResearch={runResearch}
+            onRunOutreach={runOutreach}
             onStatusChange={updateStatus}
             onDelete={deleteLead}
             onSave={saveLead}
@@ -219,7 +287,7 @@ const EDIT_FIELDS = [
   { key: 'notes',     label: 'Notes',         type: 'textarea' },
 ];
 
-function LeadDetail({ lead, onClose, onRunPipeline, onStatusChange, onDelete, onSave, onNavigate, running, progress }) {
+function LeadDetail({ lead, onClose, onRunPipeline, onRunResearch, onRunOutreach, onStatusChange, onDelete, onSave, onNavigate, running, progress }) {
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState({});
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -529,12 +597,49 @@ function LeadDetail({ lead, onClose, onRunPipeline, onStatusChange, onDelete, on
                 </div>
               </div>
             )}
-            <Button onClick={() => onRunPipeline(lead)} loading={running} style={{ width: '100%' }}>
-              <RefreshCw size={13} /> Run Full AI Pipeline
-            </Button>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'center', marginTop: 6 }}>
-              Research → Strategy → Copy → CRM Update
-            </div>
+
+            {/* Step 1 — Research */}
+            {lead.status === 'New' && (
+              <>
+                <Button onClick={() => onRunResearch(lead)} loading={running === 'research'} style={{ width: '100%', marginBottom: 8 }}>
+                  <Search size={13} /> Step 1 — Research Business
+                </Button>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 10 }}>
+                  Fetches website, detects signals, analyses weaknesses
+                </div>
+              </>
+            )}
+
+            {/* Step 2 — Generate Outreach */}
+            {(lead.status === 'Researched' || lead.business_summary) && !lead.email_body && (
+              <>
+                <Button onClick={() => onRunOutreach(lead)} loading={running === 'outreach'} style={{ width: '100%', marginBottom: 8, background: '#7c3aed', borderColor: '#7c3aed' }}>
+                  <Send size={13} /> Step 2 — Generate Outreach
+                </Button>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 10 }}>
+                  Strategy → Copywriting → Email + WhatsApp
+                </div>
+              </>
+            )}
+
+            {/* Full pipeline for leads that need both */}
+            {lead.status !== 'New' && lead.status !== 'Researched' && !lead.email_body && (
+              <Button onClick={() => onRunPipeline(lead)} loading={running === 'full'} variant="secondary" style={{ width: '100%' }}>
+                <RefreshCw size={13} /> Run Full Pipeline
+              </Button>
+            )}
+
+            {/* Re-run options for already processed leads */}
+            {lead.email_body && (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Button onClick={() => onRunResearch(lead)} loading={running === 'research'} variant="secondary" style={{ flex: 1 }} size="sm">
+                  <RefreshCw size={11} /> Re-research
+                </Button>
+                <Button onClick={() => onRunOutreach(lead)} loading={running === 'outreach'} variant="secondary" style={{ flex: 1 }} size="sm">
+                  <Send size={11} /> Re-generate Copy
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
