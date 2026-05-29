@@ -155,14 +155,14 @@ async function runApifyActor(actorId, input, limit = 5) {
 
 // ─── Platform scrapers ─────────────────────────────────────────────
 
-async function scrapeGoogleMaps(query, location, limit = 5) {
+async function scrapeGoogleMaps(query, location, limit = 5, minRating = null, maxRating = null) {
   const results = await runApifyActor('compass~crawler-google-places', {
     searchStringsArray: [`${query} in ${location}`],
     maxCrawledPlacesPerSearch: limit,
     language: 'en',
   }, limit);
 
-  return results.map((p, i) => ({
+  let mapped = results.map((p, i) => ({
     id: `gmap_${Date.now()}_${i}`,
     name: cleanName(p.title),
     website: p.website || null,
@@ -174,11 +174,23 @@ async function scrapeGoogleMaps(query, location, limit = 5) {
     status: 'New',
     brand_quality: null,
     score: null,
-    notes: `Rating: ${p.totalScore || 'N/A'} ⭐ | Reviews: ${p.reviewsCount || 0}`,
+    rating: p.totalScore || null,
+    notes: `Rating: ${p.totalScore || 'N/A'} ⭐ | Reviews: ${p.reviewsCount || 0} | ${p.address || ''}`.trim(),
     last_action: TODAY(),
     tags: [query, 'Google Maps'],
     createdAt: TODAY()
   }));
+
+  // Apply rating filter if provided
+  if (minRating !== null && maxRating !== null) {
+    mapped = mapped.filter(l => {
+      const r = parseFloat(l.rating || 0);
+      return r >= minRating && r <= maxRating;
+    });
+    console.log(`  After rating filter (${minRating}-${maxRating}★): ${mapped.length} leads`);
+  }
+
+  return mapped;
 }
 
 async function scrapeInstagram(query, location, limit = 5) {
@@ -251,7 +263,7 @@ async function scrapeLinkedIn(query, location, limit = 5) {
 // ─── Scrape endpoint ───────────────────────────────────────────────
 // No fake data. If Apify is missing or fails, we return a real error.
 app.post('/api/scrape', async (req, res) => {
-  const { query, location, source, limit = 5 } = req.body;
+  const { query, location, source, limit = 5, minRating, maxRating } = req.body;
   console.log(`\n→ Scraping "${query}" in "${location}" via ${source}`);
 
   try {
@@ -264,7 +276,7 @@ app.post('/api/scrape', async (req, res) => {
     let leads = [];
 
     if (source === 'Google Maps') {
-      leads = await scrapeGoogleMaps(query, location, limit);
+      leads = await scrapeGoogleMaps(query, location, limit, minRating, maxRating);
       console.log(`✓ Google Maps: ${leads.length} leads`);
     } else if (source === 'Instagram') {
       leads = await scrapeInstagram(query, location, limit);
