@@ -182,49 +182,51 @@ async function scrapeGoogleMaps(query, location, limit = 5) {
 }
 
 async function scrapeInstagram(query, location, limit = 5) {
-  // Instagram hashtag scraper needs "search" + "searchType" input format
-  const hashtag = `${query}${location}`.replace(/\s/g, '').toLowerCase();
+  // Use Instagram search scraper to find business accounts by keyword
   const results = await runApifyActor('apify~instagram-scraper', {
-    search: hashtag,
-    searchType: 'hashtag',
-    searchLimit: 1,
-    resultsType: 'posts',
-    resultsLimit: limit * 6,
-  }, limit * 6);
-  console.log(`  Instagram raw posts: ${results.length}`);
+    search: `${query} ${location}`,
+    searchType: 'user',
+    searchLimit: limit,
+    resultsType: 'profiles',
+    resultsLimit: limit,
+  }, limit);
+  console.log(`  Instagram raw profiles: ${results.length}`);
 
-  // Extract unique accounts from posts
-  const seen = new Set();
+  if (!results.length) throw new Error('Instagram returned no results. Try Google Maps instead.');
+
   const leads = [];
-  for (const post of results) {
-    if (!post.ownerUsername || seen.has(post.ownerUsername)) continue;
-    seen.add(post.ownerUsername);
+  for (const profile of results) {
+    if (!profile.username) continue;
     leads.push({
       id: `ig_${Date.now()}_${leads.length}`,
-      name: cleanName(post.ownerFullName || post.ownerUsername),
-      website: null,
-      instagram: `@${post.ownerUsername}`,
-      phone: null,
+      name: cleanName(profile.fullName || profile.username),
+      website: profile.externalUrl || null,
+      instagram: `@${profile.username}`,
+      phone: profile.businessPhoneNumber || null,
+      email: profile.businessEmail || null,
       category: query,
-      location: location,
+      location: profile.city || location,
       source: 'Instagram',
       status: 'New',
       brand_quality: null,
       score: null,
-      notes: `Followers: ${post.ownerFollowersCount || 'N/A'} | Posts: ${post.ownerPostsCount || 'N/A'}`,
+      notes: `Followers: ${profile.followersCount || 'N/A'} | Posts: ${profile.postsCount || 'N/A'}`,
       last_action: TODAY(),
       tags: [query, 'Instagram'],
       createdAt: TODAY()
     });
     if (leads.length >= limit) break;
   }
+
+  if (!leads.length) throw new Error('No Instagram business profiles found. Try Google Maps instead.');
   return leads;
 }
 
 async function scrapeLinkedIn(query, location, limit = 5) {
-  const results = await runApifyActor('curious_coder~linkedin-company-search-scraper', {
-    keywords: `${query} ${location}`,
+  const results = await runApifyActor('bebity~linkedin-company-search-scraper', {
+    searchKeywords: `${query} ${location}`,
     maxResults: limit,
+    locations: [location],
   }, limit);
 
   return results.map((c, i) => ({
