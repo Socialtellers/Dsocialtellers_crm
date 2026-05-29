@@ -14,7 +14,6 @@ export default function LeadsPage({ onNavigate, selectedLead: initLead }) {
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [filterRating, setFilterRating] = useState('All');
 
   const refresh = () => setLeads(db.getLeads());
 
@@ -22,10 +21,8 @@ export default function LeadsPage({ onNavigate, selectedLead: initLead }) {
     const matchSearch = !search || l.name.toLowerCase().includes(search.toLowerCase()) || l.category?.toLowerCase().includes(search.toLowerCase()) || l.location?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === 'All' || l.status === filterStatus;
     const matchQuality = filterQuality === 'All' || l.brand_quality === filterQuality;
-    const matchRating = filterRating === 'All' || 
-      (filterRating === 'low' && l.rating && parseFloat(l.rating) >= 3.0 && parseFloat(l.rating) <= 3.9) ||
-      (filterRating === 'high' && (!l.rating || parseFloat(l.rating) >= 4.0));
-    return matchSearch && matchStatus && matchQuality && matchRating;
+
+    return matchSearch && matchStatus && matchQuality;
   });
 
   const runPipeline = async (lead) => {
@@ -82,8 +79,7 @@ export default function LeadsPage({ onNavigate, selectedLead: initLead }) {
               options={['All', ...CRM_STATUSES].map(s => ({ value: s, label: s }))} style={{ width: 130 }} />
             <Select value={filterQuality} onChange={e => setFilterQuality(e.target.value)}
               options={['All', 'high', 'medium', 'low'].map(s => ({ value: s, label: s === 'All' ? 'All Quality' : s.charAt(0).toUpperCase() + s.slice(1) }))} style={{ width: 120 }} />
-            <Select value={filterRating} onChange={e => setFilterRating(e.target.value)}
-              options={[{value:'All',label:'All Ratings'},{value:'low',label:'⭐ 3.0–3.9 Stars'},{value:'high',label:'⭐ 4.0+ Stars'}]} style={{ width: 140 }} />
+
             <button onClick={() => setShowAddForm(true)}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
                 background: 'var(--accent-primary)', border: 'none', borderRadius: 8,
