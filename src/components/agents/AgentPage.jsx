@@ -35,7 +35,7 @@ export default function AgentPage({ onNavigate }) {
     setScrapeLog([{ msg: `Initializing Apify scraper for "${scrapeQuery}" in ${scrapeLocation}...`, type: 'info' }]);
     try {
       setScrapeLog(l => [...l, { msg: `Calling ${scrapeSource} scraper actor via Apify...`, type: 'info' }]);
-      const newLeads = await scrapeLeads(scrapeQuery, scrapeLocation, scrapeSource, scrapeLimit);
+      const newLeads = await scrapeLeads(scrapeQuery, scrapeLocation, scrapeSource, searchMode === 'name' ? 1 : scrapeLimit, searchMode === 'name');
       if (Array.isArray(newLeads)) {
         // Ensure unique IDs before saving to DB
         const withIds = newLeads.map((lead, i) => ({
@@ -242,7 +242,7 @@ export default function AgentPage({ onNavigate }) {
                   <div style={{ fontSize: 10, color: '#f59e0b', marginTop: 4 }}>⚠ Rating filter skipped for name searches</div>
                 )}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 0.8fr', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: searchMode === 'name' ? '1.4fr 1fr' : '1.4fr 1fr 0.8fr', gap: 10 }}>
                 <div>
                   <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: 5 }}>LOCATION</div>
                   <Input value={scrapeLocation} onChange={e => setScrapeLocation(e.target.value)} placeholder="Dubai Marina" />
@@ -252,11 +252,13 @@ export default function AgentPage({ onNavigate }) {
                   <Select value={scrapeSource} onChange={e => setScrapeSource(e.target.value)}
                     options={['Google Maps', 'Instagram', 'LinkedIn']} style={{ width: '100%' }} />
                 </div>
+                {searchMode !== 'name' && (
                 <div>
                   <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: 5 }}>COUNT</div>
                   <Select value={scrapeLimit} onChange={e => setScrapeLimit(Number(e.target.value))}
                     options={[{value:5,label:'5'},{value:10,label:'10'},{value:20,label:'20'},{value:50,label:'50'}]} style={{ width: '100%' }} />
                 </div>
+                )}
               </div>
             </div>
 
