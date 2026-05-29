@@ -126,44 +126,49 @@ export default function OutreachPage({ selectedLead, onNavigate }) {
             {/* Contact Info */}
             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
               <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>Contact Info</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {activeLead.phone && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Phone size={11} color="#16a34a" />
-                    <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>{activeLead.phone}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Phone size={12} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', width: 64, flexShrink: 0 }}>Phone</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{activeLead.phone}</span>
                   </div>
                 )}
                 {activeLead.email && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Mail size={11} color="var(--accent-primary)" />
-                    <span style={{ fontSize: 12, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeLead.email}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Mail size={12} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', width: 64, flexShrink: 0 }}>Email</span>
+                    <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{activeLead.email}</span>
                   </div>
                 )}
                 {activeLead.website && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Globe size={11} color="#6366f1" />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Globe size={12} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', width: 64, flexShrink: 0 }}>Website</span>
                     <a href={activeLead.website} target="_blank" rel="noreferrer"
-                      style={{ fontSize: 12, color: '#6366f1', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      style={{ fontSize: 13, color: 'var(--accent-primary)', textDecoration: 'none' }}>
                       {activeLead.website.replace('https://','').replace('http://','').split('/')[0]}
                     </a>
                   </div>
                 )}
                 {activeLead.instagram && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Instagram size={11} color="#ec4899" />
-                    <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>{activeLead.instagram}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Instagram size={12} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', width: 64, flexShrink: 0 }}>Instagram</span>
+                    <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{activeLead.instagram}</span>
                   </div>
                 )}
                 {activeLead.location && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <MapPin size={11} color="var(--text-muted)" />
-                    <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{activeLead.location}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <MapPin size={12} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', width: 64, flexShrink: 0 }}>Location</span>
+                    <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{activeLead.location}</span>
                   </div>
                 )}
-                {activeLead.rating && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Star size={11} color="#f59e0b" fill="#f59e0b" />
-                    <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>{activeLead.rating} stars</span>
+                {activeLead.notes && (
+                  <div style={{ marginTop: 4, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>Notes</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{activeLead.notes}</div>
                   </div>
                 )}
               </div>
