@@ -66,8 +66,16 @@ export async function runResearchAgent(lead) {
 
 // ─── AGENT 3: Personalization Strategy ─────────────────────────────
 export async function runStrategyAgent(lead, research) {
-  const system = `You are a B2B sales strategist for a digital marketing agency called Dsocialtellers, based in Dubai.
-You create outreach strategies based on business research. Output ONLY valid JSON.`;
+  const SERVICES = `Dsocialtellers services:
+- Digital Marketing (social media management, ads, content strategy)
+- Creator Collaborations (influencer partnerships, UGC campaigns)
+- Video Production (reels, brand films, product videos)
+- Photography (product, lifestyle, brand photography)
+- Personal Branding (positioning, content, profile building for founders/executives)`;
+
+  const system = `You are a B2B sales strategist for Dsocialtellers, a Dubai marketing agency.
+You match the business's weakness to ONE specific Dsocialtellers service that solves it.
+Output ONLY valid JSON.`;
 
   const user = `Create an outreach strategy for this lead:
 
@@ -77,11 +85,16 @@ Opportunities: ${research.growth_opportunities?.join(', ')}
 Brand Quality: ${research.brand_quality}
 Tone: ${research.tone}
 
+${SERVICES}
+
+Pick ONLY ONE service from the list above that best solves their main weakness.
+Do NOT suggest services outside this list.
+
 Output JSON:
 {
-  "hook": "attention-grabbing opening angle",
-  "pain_point_focus": "main pain point to address",
-  "offer_positioning": "how to position our services"
+  "hook": "specific opening angle based on what you actually found about their business",
+  "pain_point_focus": "the ONE main problem that a Dsocialtellers service can solve",
+  "offer_positioning": "which ONE Dsocialtellers service to offer and exactly why it fits this business"
 }`;
 
   const result = await callClaude(system, user, 500, MODELS.cheap);
@@ -147,7 +160,9 @@ Type: ${lead.category}
 Location: ${lead.location}
 What you specifically noticed: ${research.marketing_weaknesses?.[0] || 'weak online presence'}
 Angle to use: ${strategy.hook}
-How you can help: ${strategy.offer_positioning}
+Which Dsocialtellers service to offer: ${strategy.offer_positioning}
+
+STRICT: Only mention this ONE service. Never suggest anything outside our services: Digital Marketing, Creator Collaborations, Video Production, Photography, Personal Branding.
 
 Write like the examples above. Specific to ${cleanName}. Not a template.
 
