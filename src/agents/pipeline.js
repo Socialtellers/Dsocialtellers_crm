@@ -197,7 +197,7 @@ Make it feel like you actually looked at their business, not a template.
 
 Output JSON:
 {
-  "email_subject": "specific lowercase subject about their actual problem (max 8 words)",
+  "email_subject": "Proper Title Case Subject about their actual problem (max 8 words, capitalize main words, e.g. No WhatsApp Button on Your Website)",
   "email_body": "Hi ${cleanName}, then 3 paragraphs 70-90 words, ends with Thanks,\\nDsocialtellers${calendlyLink ? '. No raw URL.' : ''}",
   "whatsapp_message": "Hi ${cleanName}! then 2-3 sentences about their specific problem and our solution${calendlyLink ? `, then on its own line: ${calendlyLink}` : ''}"
 }`;
