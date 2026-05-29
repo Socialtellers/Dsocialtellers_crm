@@ -4,12 +4,13 @@
 const BACKEND = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? '' : 'http://localhost:3001');
 
 export const CRM_STATUSES = [
-  'New', 'Contacted', 'Replied', 'Interested',
+  'New', 'Researched', 'Contacted', 'Replied', 'Interested',
   'Not Interested', 'Follow-up', 'Closed Won', 'Closed Lost'
 ];
 
 export const STATUS_COLORS = {
   'New': '#e8651e',
+  'Researched': '#7c3aed',
   'Contacted': '#c0410f',
   'Replied': '#d97706',
   'Interested': '#16a34a',
@@ -80,6 +81,18 @@ export const db = {
       });
     } catch (e) { console.warn('Update failed:', e.message); }
     return leads.find(l => l.id === id);
+  },
+
+  saveLead: async (lead) => {
+    leads = [lead, ...leads];
+    try {
+      await fetch(`${BACKEND}/api/leads`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lead)
+      });
+    } catch (e) { console.warn('Save lead failed:', e.message); }
+    return lead;
   },
 
   deleteLead: async (id) => {
