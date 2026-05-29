@@ -202,8 +202,6 @@ export default function AgentPage({ onNavigate }) {
                   <Select value={scrapeSource} onChange={e => setScrapeSource(e.target.value)}
                     options={['Google Maps', 'Instagram', 'LinkedIn']} style={{ width: '100%' }} />
                 </div>
-
-                </div>
                 <div>
                   <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: 5 }}>COUNT</div>
                   <Select value={scrapeLimit} onChange={e => setScrapeLimit(Number(e.target.value))}
