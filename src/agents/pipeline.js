@@ -1,6 +1,6 @@
 // AI Agent Service - calls our local backend proxy (server/index.js)
 // Backend talks to Claude API and Apify — avoids CORS issues
-const BACKEND = 'http://localhost:3001';
+const BACKEND = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? '' : 'http://localhost:3001');
 
 // Model tiers — use cheap Haiku for simple agents, Sonnet for quality-critical ones
 const MODELS = {
