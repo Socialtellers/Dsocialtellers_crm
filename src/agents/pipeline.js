@@ -241,6 +241,9 @@ export async function runFullPipeline(lead, onProgress, calendlyLink = '') {
   const research = await runResearchAgent(lead);
   onProgress?.({ step: 'Research complete ✓', pct: 40, statusUpdate: 'Researched' });
 
+  // Wait for Researched status to be saved before continuing
+  await new Promise(r => setTimeout(r, 1500));
+
   onProgress?.({ step: 'Building outreach strategy...', pct: 45 });
   const strategy = await runStrategyAgent(lead, research);
   onProgress?.({ step: 'Strategy created ✓', pct: 60 });
@@ -256,11 +259,11 @@ export async function runFullPipeline(lead, onProgress, calendlyLink = '') {
 }
 
 // ─── APIFY SCRAPER ─────────────────────────────────────────────────
-export async function scrapeLeads(query, location, source = 'Google Maps', limit = 5) {
+export async function scrapeLeads(query, location, source = 'Google Maps', limit = 5, nameSearch = false) {
   const response = await fetch(`${BACKEND}/api/scrape`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, location, source, limit })
+    body: JSON.stringify({ query, location, source, limit, nameSearch })
   });
   if (!response.ok) throw new Error(`Scrape error: ${response.status} — is the server running? Run: npm run server`);
   return response.json();
