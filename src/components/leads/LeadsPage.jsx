@@ -29,8 +29,19 @@ export default function LeadsPage({ onNavigate, selectedLead: initLead }) {
     setRunning(true);
     setProgress({ step: 'Initializing...', pct: 0 });
     try {
-      const result = await runFullPipeline(lead, (p) => setProgress(p), settings.getCalendly());
-      db.updateLead(lead.id, {
+      const result = await runFullPipeline(lead, async (p) => {
+        setProgress(p);
+        // Set status to Researched mid-pipeline as soon as research is done
+        if (p.statusUpdate === 'Researched') {
+          await db.updateLead(lead.id, {
+            status: 'Researched',
+            last_action: new Date().toISOString().split('T')[0]
+          });
+          refresh();
+        }
+      }, settings.getCalendly());
+      // Final update — save all research + copy + set Contacted
+      await db.updateLead(lead.id, {
         ...result.research,
         ...result.copy,
         status: 'Contacted',
