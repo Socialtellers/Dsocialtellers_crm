@@ -224,10 +224,9 @@ async function scrapeInstagram(query, location, limit = 5) {
 }
 
 async function scrapeLinkedIn(query, location, limit = 5) {
-  const results = await runApifyActor('bebity~linkedin-company-search-scraper', {
-    searchKeywords: `${query} ${location}`,
+  const results = await runApifyActor('curious_coder~linkedin-company-search-scraper', {
+    searchUrl: `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(query + ' ' + location)}&origin=SWITCH_SEARCH_VERTICAL`,
     maxResults: limit,
-    locations: [location],
   }, limit);
 
   return results.map((c, i) => ({
