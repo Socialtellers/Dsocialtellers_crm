@@ -239,7 +239,7 @@ export async function runFullPipeline(lead, onProgress, calendlyLink = '') {
 
   onProgress?.({ step: 'Researching business...', pct: 20 });
   const research = await runResearchAgent(lead);
-  onProgress?.({ step: 'Research complete ✓', pct: 40 });
+  onProgress?.({ step: 'Research complete ✓', pct: 40, statusUpdate: 'Researched' });
 
   onProgress?.({ step: 'Building outreach strategy...', pct: 45 });
   const strategy = await runStrategyAgent(lead, research);
