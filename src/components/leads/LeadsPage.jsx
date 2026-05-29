@@ -14,6 +14,7 @@ export default function LeadsPage({ onNavigate, selectedLead: initLead }) {
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showNameSearch, setShowNameSearch] = useState(false);
 
   const refresh = () => setLeads(db.getLeads());
 
@@ -121,6 +122,27 @@ export default function LeadsPage({ onNavigate, selectedLead: initLead }) {
     }
   };
 
+  const searchByName = async (businessName, location) => {
+    try {
+      const BACKEND = import.meta.env.VITE_BACKEND_URL || '';
+      const res = await fetch(`${BACKEND}/api/scrape`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: businessName, location, source: 'Google Maps', limit: 1, nameSearch: true })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Search failed');
+      if (!data.length) throw new Error('Business not found. Try adding the city name too.');
+      const lead = data[0];
+      await db.saveLead(lead);
+      refresh();
+      setSelected(lead);
+      return lead;
+    } catch (e) {
+      throw e;
+    }
+  };
+
   const updateStatus = (leadId, status) => {
     db.updateLead(leadId, { status, last_action: new Date().toISOString().split('T')[0] });
     refresh();
@@ -155,6 +177,12 @@ export default function LeadsPage({ onNavigate, selectedLead: initLead }) {
             <Select value={filterQuality} onChange={e => setFilterQuality(e.target.value)}
               options={['All', 'high', 'medium', 'low'].map(s => ({ value: s, label: s === 'All' ? 'All Quality' : s.charAt(0).toUpperCase() + s.slice(1) }))} style={{ width: 120 }} />
 
+            <button onClick={() => setShowNameSearch(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+                background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8,
+                color: 'var(--text-primary)', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <Search size={13} /> Find Business
+            </button>
             <button onClick={() => setShowAddForm(true)}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
                 background: 'var(--accent-primary)', border: 'none', borderRadius: 8,
@@ -234,6 +262,17 @@ export default function LeadsPage({ onNavigate, selectedLead: initLead }) {
           )}
         </div>
       </div>
+
+      {/* Find Business Modal */}
+      {showNameSearch && (
+        <FindBusinessModal
+          onClose={() => setShowNameSearch(false)}
+          onFound={async (name, location) => {
+            await searchByName(name, location);
+            setShowNameSearch(false);
+          }}
+        />
+      )}
 
       {/* Add Lead Modal */}
       {showAddForm && (
@@ -735,6 +774,99 @@ function AddLeadModal({ onClose, onSave }) {
               Cancel
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FindBusinessModal({ onClose, onFound }) {
+  const [name, setName] = useState('');
+  const [location, setLocation] = useState('Dubai');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSearch = async () => {
+    if (!name.trim()) return setError('Enter a business name');
+    setLoading(true);
+    setError('');
+    try {
+      await onFound(name.trim(), location.trim());
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ background: 'var(--bg-card)', borderRadius: 14, width: '100%', maxWidth: 420,
+        border: '1px solid var(--border)', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', padding: '24px' }}>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>
+              Find Business
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+              Search Google Maps by business name
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)',
+            textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Business Name</label>
+          <input type="text" value={name} onChange={e => setName(e.target.value)}
+            placeholder="e.g. Flex Gym, Black Sheep Coffee"
+            onKeyDown={e => e.key === 'Enter' && handleSearch()}
+            autoFocus
+            style={{ width: '100%', background: 'var(--bg-input)', border: '1px solid var(--border)',
+              borderRadius: 7, padding: '10px 12px', fontSize: 13, color: 'var(--text-primary)',
+              outline: 'none', boxSizing: 'border-box' }}
+            onFocus={e => e.target.style.borderColor = 'var(--accent-primary)'}
+            onBlur={e => e.target.style.borderColor = 'var(--border)'} />
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)',
+            textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>City</label>
+          <input type="text" value={location} onChange={e => setLocation(e.target.value)}
+            placeholder="Dubai"
+            style={{ width: '100%', background: 'var(--bg-input)', border: '1px solid var(--border)',
+              borderRadius: 7, padding: '10px 12px', fontSize: 13, color: 'var(--text-primary)',
+              outline: 'none', boxSizing: 'border-box' }}
+            onFocus={e => e.target.style.borderColor = 'var(--accent-primary)'}
+            onBlur={e => e.target.style.borderColor = 'var(--border)'} />
+        </div>
+
+        {error && (
+          <div style={{ padding: '10px 12px', borderRadius: 8, marginBottom: 12,
+            background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+            fontSize: 13, color: '#ef4444' }}>{error}</div>
+        )}
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={handleSearch} disabled={loading}
+            style={{ flex: 1, background: 'var(--accent-primary)', border: 'none', borderRadius: 8,
+              color: '#fff', padding: '11px 0', fontSize: 13, fontWeight: 600,
+              cursor: loading ? 'not-allowed' : 'pointer' }}>
+            {loading ? 'Searching...' : '🔍 Search & Add'}
+          </button>
+          <button onClick={onClose}
+            style={{ flex: 1, background: 'var(--bg-surface)', border: '1px solid var(--border)',
+              borderRadius: 8, color: 'var(--text-secondary)', padding: '11px 0', fontSize: 13, cursor: 'pointer' }}>
+            Cancel
+          </button>
+        </div>
+
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 10 }}>
+          Searches Google Maps and adds the business directly to your leads
         </div>
       </div>
     </div>
