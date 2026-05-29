@@ -285,6 +285,39 @@ app.post('/api/scrape', async (req, res) => {
     }
 
     console.log(`✓ Total leads returned: ${leads.length}`);
+
+    // Save to Supabase
+    if (supabase && leads.length > 0) {
+      const rows = leads.map(l => ({
+        id: l.id,
+        name: l.name,
+        website: l.website || null,
+        instagram: l.instagram || null,
+        phone: l.phone || null,
+        email: l.email || null,
+        category: l.category || null,
+        location: l.location || null,
+        source: l.source || source,
+        status: l.status || 'New',
+        brand_quality: null,
+        score: null,
+        notes: l.notes || null,
+        last_action: l.last_action || TODAY(),
+        tags: l.tags || [],
+        created_at: new Date().toISOString()
+      }));
+
+      const { error: insertError } = await supabase
+        .from('leads')
+        .upsert(rows, { onConflict: 'id' });
+
+      if (insertError) {
+        console.warn('⚠ Supabase save warning:', insertError.message);
+      } else {
+        console.log(`✓ Saved ${leads.length} leads to Supabase`);
+      }
+    }
+
     res.json(leads);
 
   } catch (error) {
