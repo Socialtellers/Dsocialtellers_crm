@@ -1,7 +1,7 @@
 // Central data store — backed by Supabase via the backend API
 // Falls back gracefully if backend/Supabase is unavailable
 
-const BACKEND = 'http://localhost:3001';
+const BACKEND = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? '' : 'http://localhost:3001');
 
 export const CRM_STATUSES = [
   'New', 'Contacted', 'Replied', 'Interested',
