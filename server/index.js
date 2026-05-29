@@ -155,11 +155,11 @@ async function runApifyActor(actorId, input, limit = 5) {
 
 // ─── Platform scrapers ─────────────────────────────────────────────
 
-async function scrapeGoogleMaps(query, location, limit = 5, minRating = null, maxRating = null) {
+async function scrapeGoogleMaps(query, location, limit = 5, minRating = null, maxRating = null, nameSearch = false) {
   // Google Maps returns highest-rated places first.
   // To find 3.0-3.9 star businesses we need to scrape a large batch and filter.
-  const fetchLimit = 200;
-  console.log(`  Fetching ${fetchLimit} places from Apify to find ${limit} with 3.0-3.9 stars`);
+  const fetchLimit = nameSearch ? limit : 200;
+  console.log(`  Fetching ${fetchLimit} places from Apify${nameSearch ? ' (name search)' : ' to find ' + limit + ' with 3.0-3.9 stars'}`);
 
   const results = await runApifyActor('compass~crawler-google-places', {
     searchStringsArray: [`${query} in ${location}, UAE`],
@@ -201,11 +201,13 @@ async function scrapeGoogleMaps(query, location, limit = 5, minRating = null, ma
 
   console.log(`  Ratings found: ${mapped.map(l => l.rating).join(', ')}`);
 
-  // Always filter to 3.0–3.9 stars only — our target range
-  mapped = mapped.filter(l => {
-    const r = parseFloat(l.rating || 0);
-    return r >= 3.0 && r <= 3.9;
-  });
+  // Skip rating filter for name searches — user is looking for a specific business
+  if (!nameSearch) {
+    mapped = mapped.filter(l => {
+      const r = parseFloat(l.rating || 0);
+      return r >= 3.0 && r <= 3.9;
+    });
+  }
   console.log(`  After rating filter (3.0–3.9★): ${mapped.length} leads found`);
   if (mapped.length === 0) {
     throw new Error(`No businesses found with rating between 3.0 and 3.9 stars for "${query}" in ${location}. Try a different category or increase the count.`);
@@ -285,7 +287,7 @@ async function scrapeLinkedIn(query, location, limit = 5) {
 // ─── Scrape endpoint ───────────────────────────────────────────────
 // No fake data. If Apify is missing or fails, we return a real error.
 app.post('/api/scrape', async (req, res) => {
-  const { query, location, source, limit = 5, minRating, maxRating } = req.body;
+  const { query, location, source, limit = 5, minRating, maxRating, nameSearch = false } = req.body;
   console.log(`\n→ Scraping "${query}" in "${location}" via ${source}`);
 
   try {
@@ -298,7 +300,7 @@ app.post('/api/scrape', async (req, res) => {
     let leads = [];
 
     if (source === 'Google Maps') {
-      leads = await scrapeGoogleMaps(query, location, limit, minRating, maxRating);
+      leads = await scrapeGoogleMaps(query, location, limit, minRating, maxRating, nameSearch);
       console.log(`✓ Google Maps: ${leads.length} leads`);
     } else if (source === 'Instagram') {
       leads = await scrapeInstagram(query, location, limit);
