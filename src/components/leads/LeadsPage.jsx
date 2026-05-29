@@ -61,7 +61,7 @@ export default function LeadsPage({ onNavigate, selectedLead: initLead }) {
     setRunning('outreach');
     setProgress({ step: 'Building strategy...', pct: 10 });
     try {
-      const { runStrategyAgent, runCopywritingAgent } = await import('../agents/pipeline.js');
+      const { runStrategyAgent, runCopywritingAgent } = await import('../../agents/pipeline.js');
 
       // Use research data already saved on the lead
       const research = {
