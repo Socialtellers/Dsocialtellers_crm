@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, MessageSquare, Send, Copy, Check, ChevronDown, User, Phone, Globe, Instagram, MapPin, Star, Pencil, Trash2 } from 'lucide-react';
+import { Mail, MessageSquare, Send, Copy, Check, ChevronDown, User, Phone, Globe, Instagram, MapPin, Star, Pencil, Trash2, X } from 'lucide-react';
 import { db } from '../../lib/store';
 import { settings } from '../../lib/settings';
 import { Button, Card, Badge, PageHeader, EmptyState } from '../ui';
@@ -7,6 +7,10 @@ import { Button, Card, Badge, PageHeader, EmptyState } from '../ui';
 export default function OutreachPage({ selectedLead, onNavigate }) {
   const [tab, setTab] = useState('all');
   const [copied, setCopied] = useState(null);
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [editingWA, setEditingWA] = useState(false);
+  const [emailDraft, setEmailDraft] = useState({});
+  const [waDraft, setWaDraft] = useState('');
   const leads = db.getLeads().filter(l => l.email_body || l.whatsapp_message);
   const allMessages = db.getAllMessages();
 
@@ -184,7 +188,19 @@ export default function OutreachPage({ selectedLead, onNavigate }) {
                     </div>
                     <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Cold Email</span>
                   </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => { setEmailDraft({ subject: activeLead.email_subject, body: activeLead.email_body }); setEditingEmail(true); }}
+                      style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', color: 'var(--text-muted)' }}
+                      title="Edit email">
+                      <Pencil size={12} />
+                    </button>
+                    <button onClick={async () => { await db.updateLead(activeLead.id, { email_subject: null, email_body: null }); setActiveLead({ ...activeLead, email_subject: null, email_body: null }); }}
+                      style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', color: 'var(--text-muted)' }}
+                      onMouseEnter={e => e.currentTarget.style.color='#ef4444'}
+                      onMouseLeave={e => e.currentTarget.style.color='var(--text-muted)'}
+                      title="Delete email">
+                      <Trash2 size={12} />
+                    </button>
                     <Button size="sm" variant="secondary" onClick={() => copy(activeLead.email_body, 'email_body')} icon={copied === 'email_body' ? Check : Copy}>
                       {copied === 'email_body' ? 'Copied!' : 'Copy'}
                     </Button>
@@ -194,10 +210,36 @@ export default function OutreachPage({ selectedLead, onNavigate }) {
                   </div>
                 </div>
 
+                {editingEmail ? (
+                  <div style={{ background: 'rgba(232,101,30,0.05)', border: '1px solid rgba(232,101,30,0.3)', borderRadius: 8, padding: '12px 14px', marginBottom: 10 }}>
+                    <div style={{ fontSize: 10, color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)', marginBottom: 8 }}>EDITING EMAIL</div>
+                    <div style={{ marginBottom: 8 }}>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>Subject</div>
+                      <input value={emailDraft.subject || ''} onChange={e => setEmailDraft(d => ({...d, subject: e.target.value}))}
+                        style={{ width: '100%', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 6, padding: '7px 10px', fontSize: 12, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>Body</div>
+                      <textarea value={emailDraft.body || ''} onChange={e => setEmailDraft(d => ({...d, body: e.target.value}))}
+                        rows={8} style={{ width: '100%', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 6, padding: '7px 10px', fontSize: 12, color: 'var(--text-primary)', outline: 'none', resize: 'vertical', fontFamily: 'var(--font-body)', boxSizing: 'border-box' }} />
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={async () => { await db.updateLead(activeLead.id, { email_subject: emailDraft.subject, email_body: emailDraft.body }); setActiveLead({...activeLead, email_subject: emailDraft.subject, email_body: emailDraft.body}); setEditingEmail(false); }}
+                        style={{ flex: 1, background: 'var(--accent-primary)', border: 'none', borderRadius: 7, padding: '8px 0', fontSize: 12, fontWeight: 600, color: '#fff', cursor: 'pointer' }}>
+                        Save Changes
+                      </button>
+                      <button onClick={() => setEditingEmail(false)}
+                        style={{ flex: 1, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 7, padding: '8px 0', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
                 <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', marginBottom: 10 }}>
                   <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: 4 }}>SUBJECT LINE</div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{activeLead.email_subject}</div>
                 </div>
+                )}
 
                 <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px' }}>
                   <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: 8 }}>BODY</div>
@@ -246,7 +288,19 @@ export default function OutreachPage({ selectedLead, onNavigate }) {
                     </div>
                     <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>WhatsApp Message</span>
                   </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => { setWaDraft(activeLead.whatsapp_message); setEditingWA(true); }}
+                      style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', color: 'var(--text-muted)' }}
+                      title="Edit message">
+                      <Pencil size={12} />
+                    </button>
+                    <button onClick={async () => { await db.updateLead(activeLead.id, { whatsapp_message: null }); setActiveLead({...activeLead, whatsapp_message: null}); }}
+                      style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', color: 'var(--text-muted)' }}
+                      onMouseEnter={e => e.currentTarget.style.color='#ef4444'}
+                      onMouseLeave={e => e.currentTarget.style.color='var(--text-muted)'}
+                      title="Delete message">
+                      <Trash2 size={12} />
+                    </button>
                     <Button size="sm" variant="secondary" onClick={() => copy(activeLead.whatsapp_message, 'wa')} icon={copied === 'wa' ? Check : Copy}>
                       {copied === 'wa' ? 'Copied!' : 'Copy'}
                     </Button>
@@ -255,6 +309,24 @@ export default function OutreachPage({ selectedLead, onNavigate }) {
                     </Button>
                   </div>
                 </div>
+
+                {editingWA && (
+                  <div style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 8, padding: '12px 14px', marginBottom: 10 }}>
+                    <div style={{ fontSize: 10, color: '#16a34a', fontFamily: 'var(--font-mono)', marginBottom: 8 }}>EDITING WHATSAPP</div>
+                    <textarea value={waDraft} onChange={e => setWaDraft(e.target.value)}
+                      rows={5} style={{ width: '100%', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 6, padding: '7px 10px', fontSize: 12, color: 'var(--text-primary)', outline: 'none', resize: 'vertical', fontFamily: 'var(--font-body)', boxSizing: 'border-box', marginBottom: 10 }} />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={async () => { await db.updateLead(activeLead.id, { whatsapp_message: waDraft }); setActiveLead({...activeLead, whatsapp_message: waDraft}); setEditingWA(false); }}
+                        style={{ flex: 1, background: '#16a34a', border: 'none', borderRadius: 7, padding: '8px 0', fontSize: 12, fontWeight: 600, color: '#fff', cursor: 'pointer' }}>
+                        Save Changes
+                      </button>
+                      <button onClick={() => setEditingWA(false)}
+                        style={{ flex: 1, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 7, padding: '8px 0', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* WhatsApp bubble preview */}
                 <div style={{ background: '#0d1a0d', border: '1px solid rgba(16,185,129,0.15)', borderRadius: 10, padding: '16px' }}>
