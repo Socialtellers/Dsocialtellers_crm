@@ -162,9 +162,11 @@ async function scrapeGoogleMaps(query, location, limit = 5, minRating = null, ma
   console.log(`  Fetching ${fetchLimit} places from Apify to find ${limit} with 3.0-3.9 stars`);
 
   const results = await runApifyActor('compass~crawler-google-places', {
-    searchStringsArray: [`${query} in ${location}`],
+    searchStringsArray: [`${query} in ${location}, UAE`],
     maxCrawledPlacesPerSearch: fetchLimit,
     language: 'en',
+    countryCode: 'ae',
+    city: location,
   }, fetchLimit);
 
   // Debug: log first result to see actual field names
