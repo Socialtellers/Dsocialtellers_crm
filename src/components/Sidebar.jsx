@@ -1,15 +1,15 @@
 import React from 'react';
-import { LayoutDashboard, Users, Kanban, Send, Bot, Settings, Zap, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Users, Kanban, Send, Bot, Zap, ChevronRight, LogOut } from 'lucide-react';
 
 const NAV = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'leads', label: 'Lead Database', icon: Users },
-  { id: 'crm', label: 'CRM Pipeline', icon: Kanban },
-  { id: 'outreach', label: 'Outreach', icon: Send },
-  { id: 'agents', label: 'AI Agents', icon: Bot },
+  { id: 'dashboard', label: 'Dashboard',    icon: LayoutDashboard },
+  { id: 'leads',     label: 'Lead Database', icon: Users },
+  { id: 'crm',       label: 'CRM Pipeline',  icon: Kanban },
+  { id: 'outreach',  label: 'Outreach',       icon: Send },
+  { id: 'agents',    label: 'AI Agents',      icon: Bot },
 ];
 
-export default function Sidebar({ currentPage, onNavigate }) {
+export default function Sidebar({ currentPage, onNavigate, onLogout, userEmail }) {
   return (
     <aside style={{
       width: 220, flexShrink: 0,
@@ -47,18 +47,15 @@ export default function Sidebar({ currentPage, onNavigate }) {
         {NAV.map(({ id, label, icon: Icon }) => {
           const active = currentPage === id;
           return (
-            <button
-              key={id}
-              onClick={() => onNavigate(id)}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                padding: '9px 12px', borderRadius: 7, marginBottom: 2,
-                background: active ? 'var(--accent-glow)' : 'transparent',
-                border: active ? '1px solid rgba(232,101,30,0.2)' : '1px solid transparent',
-                color: active ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                fontSize: 13, fontWeight: active ? 600 : 400,
-                cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left'
-              }}
+            <button key={id} onClick={() => onNavigate(id)} style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+              padding: '9px 12px', borderRadius: 7, marginBottom: 2,
+              background: active ? 'var(--accent-glow)' : 'transparent',
+              border: active ? '1px solid rgba(232,101,30,0.2)' : '1px solid transparent',
+              color: active ? 'var(--accent-primary)' : 'var(--text-secondary)',
+              fontSize: 13, fontWeight: active ? 600 : 400,
+              cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left'
+            }}
               onMouseEnter={e => { if (!active) { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}}
               onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}}
             >
@@ -72,20 +69,47 @@ export default function Sidebar({ currentPage, onNavigate }) {
 
       {/* Footer */}
       <div style={{ padding: '12px 10px', borderTop: '1px solid var(--border)' }}>
+        {/* Status */}
         <div style={{
-          padding: '10px 12px', borderRadius: 8,
+          padding: '10px 12px', borderRadius: 8, marginBottom: 8,
           background: 'linear-gradient(135deg, rgba(232,101,30,0.1), rgba(245,166,35,0.1))',
           border: '1px solid rgba(232,101,30,0.1)'
         }}>
           <div style={{ fontSize: 11, color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)', marginBottom: 4 }}>
             ● SYSTEM ONLINE
           </div>
-          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-            AI Agents Active
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>AI Agents Active</div>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Claude Sonnet 4 · Apify</div>
+        </div>
+
+        {/* User + Logout */}
+        <div style={{
+          padding: '8px 12px', borderRadius: 8,
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          display: 'flex', alignItems: 'center', gap: 8
+        }}>
+          <div style={{
+            width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+            background: 'var(--accent-primary)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 11, fontWeight: 700, color: '#fff'
+          }}>
+            {userEmail?.charAt(0).toUpperCase() || 'U'}
           </div>
-          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>
-            Claude Sonnet 4 · Apify
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, color: 'var(--text-primary)', fontWeight: 600,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {userEmail?.split('@')[0] || 'User'}
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Signed in</div>
           </div>
+          <button onClick={onLogout} title="Sign out"
+            style={{ background: 'none', border: 'none', padding: 4, cursor: 'pointer',
+              color: 'var(--text-muted)', borderRadius: 5, flexShrink: 0 }}
+            onMouseEnter={e => e.currentTarget.style.color = '#dc2626'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}>
+            <LogOut size={14} />
+          </button>
         </div>
       </div>
     </aside>
