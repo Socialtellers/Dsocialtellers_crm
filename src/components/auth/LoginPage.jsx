@@ -47,7 +47,7 @@ export default function LoginPage({ onLogin }) {
           </div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800,
             color: 'var(--text-primary)', letterSpacing: '-0.5px', marginBottom: 6 }}>
-            Socialtellers CRM
+            Social Tellers CRM
           </div>
           <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Sign in to your workspace</div>
         </div>
@@ -106,7 +106,7 @@ export default function LoginPage({ onLogin }) {
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 20, fontSize: 12, color: 'var(--text-muted)' }}>
-          Socialtellers · AI Lead Intelligence OS
+          Social Tellers · AI Lead Intelligence OS
         </div>
       </div>
     </div>
