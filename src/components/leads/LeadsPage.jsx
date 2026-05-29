@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Globe, Instagram, Phone, MapPin, X, Mail, ChevronRight, Trash2, RefreshCw, Pencil, Check } from 'lucide-react';
+import { Search, Globe, Instagram, Phone, MapPin, X, Mail, ChevronRight, Trash2, RefreshCw, Pencil, Check, Plus, Star } from 'lucide-react';
 import { db, CRM_STATUSES, STATUS_COLORS } from '../../lib/store';
 import { StatusBadge, QualityBadge, ScorePill, Badge, Card, Button, Input, Select, Tag, PageHeader, EmptyState } from '../ui';
 import { runFullPipeline } from '../../agents/pipeline';
@@ -13,6 +13,8 @@ export default function LeadsPage({ onNavigate, selectedLead: initLead }) {
   const [selected, setSelected] = useState(initLead || null);
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [filterRating, setFilterRating] = useState('All');
 
   const refresh = () => setLeads(db.getLeads());
 
@@ -20,7 +22,10 @@ export default function LeadsPage({ onNavigate, selectedLead: initLead }) {
     const matchSearch = !search || l.name.toLowerCase().includes(search.toLowerCase()) || l.category?.toLowerCase().includes(search.toLowerCase()) || l.location?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === 'All' || l.status === filterStatus;
     const matchQuality = filterQuality === 'All' || l.brand_quality === filterQuality;
-    return matchSearch && matchStatus && matchQuality;
+    const matchRating = filterRating === 'All' || 
+      (filterRating === 'low' && l.rating && parseFloat(l.rating) >= 3.0 && parseFloat(l.rating) <= 3.9) ||
+      (filterRating === 'high' && (!l.rating || parseFloat(l.rating) >= 4.0));
+    return matchSearch && matchStatus && matchQuality && matchRating;
   });
 
   const runPipeline = async (lead) => {
@@ -77,6 +82,14 @@ export default function LeadsPage({ onNavigate, selectedLead: initLead }) {
               options={['All', ...CRM_STATUSES].map(s => ({ value: s, label: s }))} style={{ width: 130 }} />
             <Select value={filterQuality} onChange={e => setFilterQuality(e.target.value)}
               options={['All', 'high', 'medium', 'low'].map(s => ({ value: s, label: s === 'All' ? 'All Quality' : s.charAt(0).toUpperCase() + s.slice(1) }))} style={{ width: 120 }} />
+            <Select value={filterRating} onChange={e => setFilterRating(e.target.value)}
+              options={[{value:'All',label:'All Ratings'},{value:'low',label:'⭐ 3.0–3.9 Stars'},{value:'high',label:'⭐ 4.0+ Stars'}]} style={{ width: 140 }} />
+            <button onClick={() => setShowAddForm(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+                background: 'var(--accent-primary)', border: 'none', borderRadius: 8,
+                color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <Plus size={13} /> Add Lead
+            </button>
           </div>
         </div>
 
@@ -150,6 +163,23 @@ export default function LeadsPage({ onNavigate, selectedLead: initLead }) {
           )}
         </div>
       </div>
+
+      {/* Add Lead Modal */}
+      {showAddForm && (
+        <AddLeadModal onClose={() => setShowAddForm(false)} onSave={async (data) => {
+          const newLead = {
+            id: `manual_${Date.now()}`,
+            status: 'New',
+            source: 'Manual',
+            last_action: new Date().toISOString().split('T')[0],
+            tags: [],
+            ...data
+          };
+          await db.saveLead(newLead);
+          refresh();
+          setShowAddForm(false);
+        }} />
+      )}
 
       {/* Right: Detail */}
       {selected && (
@@ -500,6 +530,102 @@ function LeadDetail({ lead, onClose, onRunPipeline, onStatusChange, onDelete, on
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function AddLeadModal({ onClose, onSave }) {
+  const [data, setData] = useState({
+    name: '', category: '', location: 'Dubai', website: '',
+    instagram: '', phone: '', email: '', notes: '', rating: ''
+  });
+  const [saving, setSaving] = useState(false);
+
+  const set = (k, v) => setData(d => ({ ...d, [k]: v }));
+
+  const handleSave = async () => {
+    if (!data.name) return alert('Business name is required');
+    setSaving(true);
+    await onSave(data);
+    setSaving(false);
+  };
+
+  const fields = [
+    { key: 'name', label: 'Business Name *', placeholder: 'e.g. GymNation' },
+    { key: 'category', label: 'Category', placeholder: 'e.g. Gym, Cafe, Salon' },
+    { key: 'location', label: 'Location', placeholder: 'e.g. Dubai Marina' },
+    { key: 'website', label: 'Website', placeholder: 'https://...' },
+    { key: 'instagram', label: 'Instagram', placeholder: '@handle' },
+    { key: 'phone', label: 'Phone', placeholder: '+971...' },
+    { key: 'email', label: 'Email', placeholder: 'info@...' },
+    { key: 'rating', label: 'Google Rating', placeholder: 'e.g. 3.5' },
+    { key: 'notes', label: 'Notes', placeholder: 'Any notes...', textarea: true },
+  ];
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ background: 'var(--bg-card)', borderRadius: 14, width: '100%', maxWidth: 480,
+        maxHeight: '90vh', overflow: 'auto', border: '1px solid var(--border)',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+        {/* Header */}
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>
+              Add Lead Manually
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+              Enter the business details below
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--text-muted)', padding: 4 }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Fields */}
+        <div style={{ padding: '16px 24px' }}>
+          {fields.map(({ key, label, placeholder, textarea }) => (
+            <div key={key} style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: 11, fontFamily: 'var(--font-mono)',
+                color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+                {label}
+              </label>
+              {textarea ? (
+                <textarea value={data[key]} onChange={e => set(key, e.target.value)}
+                  placeholder={placeholder} rows={3}
+                  style={{ width: '100%', background: 'var(--bg-input)', border: '1px solid var(--border)',
+                    borderRadius: 7, padding: '8px 10px', fontSize: 12, color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-body)', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
+              ) : (
+                <input type="text" value={data[key]} onChange={e => set(key, e.target.value)}
+                  placeholder={placeholder}
+                  style={{ width: '100%', background: 'var(--bg-input)', border: '1px solid var(--border)',
+                    borderRadius: 7, padding: '8px 10px', fontSize: 12, color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-body)', outline: 'none', boxSizing: 'border-box' }}
+                  onFocus={e => e.target.style.borderColor = 'var(--accent-primary)'}
+                  onBlur={e => e.target.style.borderColor = 'var(--border)'} />
+              )}
+            </div>
+          ))}
+
+          {/* Buttons */}
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+            <button onClick={handleSave} disabled={saving}
+              style={{ flex: 1, background: 'var(--accent-primary)', border: 'none', borderRadius: 8,
+                color: '#fff', padding: '10px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              {saving ? 'Saving...' : 'Add Lead'}
+            </button>
+            <button onClick={onClose}
+              style={{ flex: 1, background: 'var(--bg-surface)', border: '1px solid var(--border)',
+                borderRadius: 8, color: 'var(--text-secondary)', padding: '10px 0', fontSize: 13, cursor: 'pointer' }}>
+              Cancel
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
