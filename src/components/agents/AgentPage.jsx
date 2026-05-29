@@ -17,6 +17,7 @@ export default function AgentPage({ onNavigate }) {
   const [scrapeQuery, setScrapeQuery] = useState('');
   const [scrapeLocation, setScrapeLocation] = useState('Dubai');
   const [scrapeSource, setScrapeSource] = useState('Google Maps');
+  const [ratingFilter, setRatingFilter] = useState('all');
   const [scrapeLimit, setScrapeLimit] = useState(5);
   const [scraping, setScraping] = useState(false);
   const [scrapeLog, setScrapeLog] = useState([]);
@@ -200,6 +201,15 @@ export default function AgentPage({ onNavigate }) {
                   <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: 5 }}>SOURCE</div>
                   <Select value={scrapeSource} onChange={e => setScrapeSource(e.target.value)}
                     options={['Google Maps', 'Instagram', 'LinkedIn']} style={{ width: '100%' }} />
+                </div>
+                {scrapeSource === 'Google Maps' && (
+                <div>
+                  <label style={{ display: 'block', fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>RATING FILTER</label>
+                  <Select value={ratingFilter} onChange={e => setRatingFilter(e.target.value)}
+                    options={[{value:'all',label:'All Ratings'},{value:'low',label:'⭐ 3.0 – 3.9 Stars Only'}]} style={{ width: '100%' }} />
+                </div>
+                )}
+                <div style={{ display: 'none' }}>
                 </div>
                 <div>
                   <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: 5 }}>COUNT</div>
