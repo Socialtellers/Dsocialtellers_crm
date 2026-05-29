@@ -71,10 +71,15 @@ export default function AgentPage({ onNavigate }) {
       setBatchLogs(l => [...l, { msg: `[${i+1}/${newLeads.length}] Processing: ${lead.name}`, type: 'info' }]);
 
       try {
-        await runFullPipeline(lead, (p) => {
+        await runFullPipeline(lead, async (p) => {
           setBatchProgress(prev => prev.map(pp => pp.id === lead.id ? { ...pp, pct: p.pct, step: p.step } : pp));
+          // Set Researched status mid-pipeline
+          if (p.statusUpdate === 'Researched') {
+            await db.updateLead(lead.id, { status: 'Researched', last_action: new Date().toISOString().split('T')[0] });
+            setBatchLogs(l => [...l, { msg: `  📋 ${lead.name} — researched`, type: 'info' }]);
+          }
         }, settings.getCalendly());
-        const updated = db.getLead(lead.id);
+        await db.updateLead(lead.id, { status: 'Contacted', last_action: new Date().toISOString().split('T')[0] });
         setBatchProgress(prev => prev.map(p => p.id === lead.id ? { ...p, status: 'done', pct: 100, step: 'Complete' } : p));
         setBatchLogs(l => [...l, { msg: `  ✓ ${lead.name} — copy generated, status: Contacted`, type: 'success' }]);
       } catch (e) {
