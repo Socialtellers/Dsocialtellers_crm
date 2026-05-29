@@ -99,7 +99,7 @@ export default function AgentPage({ onNavigate }) {
       setBatchProgress(prev => prev.map(p => p.id === lead.id ? { ...p, pct: 60, step: 'Generating copy...' } : p));
       setBatchLogs(l => [...l, { msg: `[${i+1}/${researched.length}] Generating outreach: ${lead.name}`, type: 'info' }]);
       try {
-        const { runStrategyAgent, runCopywritingAgent } = await import('../agents/pipeline.js');
+        const { runStrategyAgent, runCopywritingAgent } = await import('../../agents/pipeline.js');
         const research = { marketing_weaknesses: lead.marketing_weaknesses, growth_opportunities: lead.growth_opportunities, brand_quality: lead.brand_quality, tone: lead.tone };
         const strategy = await runStrategyAgent(lead, research);
         const copy = await runCopywritingAgent(lead, research, strategy, settings.getCalendly());
