@@ -17,6 +17,7 @@ export default function AgentPage({ onNavigate }) {
   const [scrapeQuery, setScrapeQuery] = useState('');
   const [scrapeLocation, setScrapeLocation] = useState('Dubai');
   const [scrapeSource, setScrapeSource] = useState('Google Maps');
+  const [searchMode, setSearchMode] = useState('type'); // 'type' or 'name'
   const [scrapeLimit, setScrapeLimit] = useState(5);
   const [scraping, setScraping] = useState(false);
   const [scrapeLog, setScrapeLog] = useState([]);
@@ -216,9 +217,30 @@ export default function AgentPage({ onNavigate }) {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
+              {/* Search mode toggle */}
+              <div style={{ display: 'flex', gap: 6 }}>
+                {['type', 'name'].map(mode => (
+                  <button key={mode} onClick={() => { setSearchMode(mode); setScrapeQuery(''); }}
+                    style={{
+                      flex: 1, padding: '6px 0', borderRadius: 7, fontSize: 11, fontWeight: 600,
+                      cursor: 'pointer', transition: 'all 0.15s',
+                      background: searchMode === mode ? 'var(--accent-primary)' : 'var(--bg-input)',
+                      border: `1px solid ${searchMode === mode ? 'var(--accent-primary)' : 'var(--border)'}`,
+                      color: searchMode === mode ? '#fff' : 'var(--text-muted)'
+                    }}>
+                    {mode === 'type' ? '🔍 By Category' : '🏢 By Name'}
+                  </button>
+                ))}
+              </div>
               <div>
-                <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: 5 }}>BUSINESS TYPE</div>
-                <Input value={scrapeQuery} onChange={e => setScrapeQuery(e.target.value)} placeholder="e.g. restaurants, beauty salons, gyms" />
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: 5 }}>
+                  {searchMode === 'type' ? 'BUSINESS TYPE' : 'BUSINESS NAME'}
+                </div>
+                <Input value={scrapeQuery} onChange={e => setScrapeQuery(e.target.value)}
+                  placeholder={searchMode === 'type' ? 'e.g. restaurants, beauty salons, gyms' : 'e.g. Flex Gym, Black Sheep Coffee'} />
+                {searchMode === 'name' && (
+                  <div style={{ fontSize: 10, color: '#f59e0b', marginTop: 4 }}>⚠ Rating filter skipped for name searches</div>
+                )}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 0.8fr', gap: 10 }}>
                 <div>
