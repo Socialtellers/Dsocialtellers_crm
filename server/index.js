@@ -912,6 +912,14 @@ app.post('/api/calendly-webhook', async (req, res) => {
   }
 });
 
+// ─── Serve frontend static files (production) ─────────────────────
+app.use(express.static(join(__dirname, '../dist')));
+app.get('*', (req, res) => {
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(join(__dirname, '../dist/index.html'));
+  }
+});
+
 // ─── Health ────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({
