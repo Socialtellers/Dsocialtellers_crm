@@ -30,7 +30,7 @@ export default function Sidebar({ currentPage, onNavigate, onLogout, userEmail }
           </div>
           <div>
             <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
-              Dsocialtellers
+              Socialtellers
             </div>
             <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginTop: 1 }}>
               AI Outreach OS
