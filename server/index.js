@@ -513,7 +513,16 @@ Based on the ACTUAL data above (not guesses), output JSON:
 
     const text = data.content[0].text.replace(/```json\n?|\n?```/g, '').trim();
     const research = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || text);
-    console.log(`✓ Research done (${research.data_source})`);
+    console.log(`✓ Research done`);
+
+    // Update lead status to Researched in Supabase immediately
+    if (supabase && req.body.id) {
+      await supabase.from('leads').update({
+        status: 'Researched',
+        last_action: TODAY()
+      }).eq('id', req.body.id);
+    }
+
     res.json(research);
 
   } catch (error) {
