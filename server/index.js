@@ -740,6 +740,62 @@ app.post('/api/send-whatsapp', async (req, res) => {
   }
 });
 
+// ── AI Auto-reply generator ────────────────────────────────────
+async function generateWhatsAppReply(lead, incomingMessage) {
+  if (!API_KEY) return null;
+
+  const SOCIAL_TELLERS_CONTEXT = `You are replying on behalf of Social Tellers, a creative marketing agency in Dubai.
+
+About Social Tellers:
+- We help brands grow through social media, content production, creator collaborations and paid advertising
+- Services: Social Media Marketing (Instagram, TikTok, Facebook, Google ads), Influencer & Creator Marketing, Content Production (videos, photography, reels), Personal Branding
+- We've worked with: Kibo Catering, Wakey Wakey, Caffe Pralet, Kind Kones, Papa Jones BBQ & Grill
+- Results we deliver: increased social media reach, higher engagement, more customers, viral content, paid ads performance
+- Based in Dubai (in5 Media, Dubai Production City) and Singapore
+- Founded by Dan — content creator, marketer, photographer/videographer and business owner
+- Booking link: https://calendly.com/socialtellers/meeting
+
+You are texting a potential client named ${lead.name || 'there'} who runs a ${lead.category || 'business'} in ${lead.location || 'Dubai'}.
+We reached out to them about: ${lead.whatsapp_message || 'our marketing services'}.`;
+
+  const system = `${SOCIAL_TELLERS_CONTEXT}
+
+REPLY RULES — very important:
+- Sound like a real person texting, not a corporate bot
+- Keep replies SHORT — 2-4 sentences max
+- Casual, warm, confident tone
+- If they ask for examples or portfolio → mention 1-2 relevant brands we worked with and offer to share more on a call
+- If they ask about pricing → say it depends on the scope, easier to discuss on a quick call, share the Calendly link
+- If they are interested → acknowledge and push for a call with the Calendly link
+- If they say not interested → be gracious, say no problem, leave the door open
+- If they ask who we are → give a one-line description and what we can do for their specific business
+- If unclear → ask one simple clarifying question
+- NEVER use em-dashes (—)
+- NEVER sound like AI or a template
+- NEVER write more than 4 sentences
+- Sign off naturally, no need for "Thanks, Social Tellers" in every message`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5',
+      max_tokens: 300,
+      system,
+      messages: [{ role: 'user', content: `They just replied: "${incomingMessage}"
+
+Write a natural WhatsApp reply from Social Tellers.` }]
+    })
+  });
+
+  const data = await res.json();
+  return data.content?.[0]?.text || null;
+}
+
 // ── Webhook — Meta verification + incoming messages ────────────
 app.get('/api/whatsapp-webhook', (req, res) => {
   const mode  = req.query['hub.mode'];
@@ -785,6 +841,7 @@ app.post('/api/whatsapp-webhook', async (req, res) => {
 
           if (matchedLead) {
             console.log(`  Matched lead: ${matchedLead.name}`);
+
             // Log the inbound message
             if (supabase) {
               await supabase.from('messages').insert({
@@ -797,13 +854,38 @@ app.post('/api/whatsapp-webhook', async (req, res) => {
                 status: 'received',
                 timestamp
               });
-              // Update lead status to Replied
               await supabase.from('leads').update({
                 status: 'Replied',
                 last_action: TODAY()
               }).eq('id', matchedLead.id);
               console.log(`  Updated ${matchedLead.name} → Replied`);
             }
+
+            // Generate and send AI auto-reply
+            try {
+              const autoReply = await generateWhatsAppReply(matchedLead, incomingText);
+              if (autoReply) {
+                await sendWhatsAppMessage(fromPhone, autoReply);
+                console.log(`  ✓ Auto-reply sent to ${matchedLead.name}`);
+
+                // Log the outbound auto-reply
+                if (supabase) {
+                  await supabase.from('messages').insert({
+                    id: `wa_auto_${Date.now()}`,
+                    lead_id: matchedLead.id,
+                    type: 'whatsapp',
+                    direction: 'outbound',
+                    subject: null,
+                    content: autoReply,
+                    status: 'sent',
+                    timestamp: new Date().toISOString()
+                  });
+                }
+              }
+            } catch (replyErr) {
+              console.error(`  ✗ Auto-reply failed: ${replyErr.message}`);
+            }
+
           } else {
             console.log(`  No matching lead found for ${fromPhone}`);
           }
