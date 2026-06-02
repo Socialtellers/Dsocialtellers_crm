@@ -5,6 +5,7 @@ import LeadsPage from './components/leads/LeadsPage';
 import CRMPage from './components/crm/CRMPage';
 import OutreachPage from './components/outreach/OutreachPage';
 import AgentPage from './components/agents/AgentPage';
+import WhatsAppInbox from './components/outreach/WhatsAppInbox';
 import LoginPage, { supabase } from './components/auth/LoginPage';
 import { loadLeads, loadMessages } from './lib/store';
 import './styles/globals.css';
@@ -95,6 +96,7 @@ export default function App() {
         {page === 'leads' && <LeadsPage onNavigate={navigate} selectedLead={selectedLead} />}
         {page === 'crm' && <CRMPage onNavigate={navigate} />}
         {page === 'outreach' && <OutreachPage selectedLead={selectedLead} onNavigate={navigate} />}
+        {page === 'whatsapp' && <WhatsAppInbox />}
         {page === 'agents' && <AgentPage onNavigate={navigate} />}
       </main>
     </div>
