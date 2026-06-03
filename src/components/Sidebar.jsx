@@ -53,7 +53,7 @@ export default function Sidebar({ currentPage, onNavigate, onLogout, userEmail }
               padding: '9px 12px', borderRadius: 7, marginBottom: 2,
               background: active ? 'var(--accent-glow)' : 'transparent',
               border: active ? '1px solid rgba(232,101,30,0.2)' : '1px solid transparent',
-              color: active ? (color || 'var(--accent-primary)') : 'var(--text-secondary)',
+              color: active ? 'var(--accent-primary)' : (color && !active ? color : 'var(--text-secondary)'),
               fontSize: 13, fontWeight: active ? 600 : 400,
               cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left'
             }}
