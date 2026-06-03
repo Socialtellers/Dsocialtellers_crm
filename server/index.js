@@ -746,7 +746,7 @@ async function sendWhatsAppTemplate(to) {
         type: 'template',
         template: {
           name: 'social_tellers_outreach',
-          language: { code: 'en_US' }
+          language: { code: 'en' }
         }
       })
     }
