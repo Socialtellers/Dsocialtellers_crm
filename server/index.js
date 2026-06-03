@@ -917,7 +917,25 @@ app.post('/api/whatsapp-webhook', async (req, res) => {
 
             // Generate and send AI auto-reply
             try {
-              const autoReply = await generateWhatsAppReply(matchedLead, incomingText);
+              let autoReply;
+
+              // Check if this is their FIRST reply
+              const { data: prevInbound } = supabase ? await supabase.from('messages')
+                .select('id').eq('lead_id', matchedLead.id)
+                .eq('type', 'whatsapp').eq('direction', 'inbound')
+                .limit(2) : { data: [] };
+
+              const isFirstReply = !prevInbound || prevInbound.length <= 1;
+
+              if (isFirstReply && matchedLead.whatsapp_message) {
+                // First reply — send the personalized outreach message
+                autoReply = matchedLead.whatsapp_message;
+                console.log(`  → Sending personalized outreach as first auto-reply`);
+              } else {
+                // Subsequent replies — use Claude to respond naturally
+                autoReply = await generateWhatsAppReply(matchedLead, incomingText);
+              }
+
               if (autoReply) {
                 await sendWhatsAppMessage(fromPhone, autoReply);
                 console.log(`  ✓ Auto-reply sent to ${matchedLead.name}`);
