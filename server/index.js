@@ -593,12 +593,44 @@ app.patch('/api/leads/:id', async (req, res) => {
   if (!supabase) return res.status(500).json({ error: 'Supabase not configured' });
   try {
     const updates = { ...req.body };
-    // Strip fields that don't exist in the Supabase schema
     const INVALID_FIELDS = ['createdAt', 'id', 'data_source', 'leadId'];
     INVALID_FIELDS.forEach(f => delete updates[f]);
     const { data, error } = await supabase.from('leads').update(updates).eq('id', req.params.id).select();
     if (error) throw error;
-    res.json(data[0] ? rowToLead(data[0]) : null);
+
+    const lead = data[0] ? rowToLead(data[0]) : null;
+
+    // Auto-send WhatsApp template when pipeline generates copy (whatsapp_message just set)
+    if (lead && updates.whatsapp_message && lead.phone && WA_PHONE_ID && WA_TOKEN) {
+      try {
+        // Check if we already sent a template to this lead
+        const { data: prevMsgs } = await supabase.from('messages')
+          .select('id').eq('lead_id', lead.id)
+          .eq('type', 'whatsapp').eq('direction', 'outbound')
+          .limit(1);
+
+        if (!prevMsgs || prevMsgs.length === 0) {
+          console.log(`→ Auto-sending WhatsApp template to ${lead.name} (${lead.phone})`);
+          const result = await sendWhatsAppTemplate(lead.phone);
+          console.log(`✓ Template auto-sent: ${result.messages?.[0]?.id}`);
+
+          // Log the auto-sent template
+          await supabase.from('messages').insert({
+            id: `wa_auto_${Date.now()}`,
+            lead_id: lead.id,
+            type: 'whatsapp',
+            direction: 'outbound',
+            content: 'Hi, just wanted to reach out about your business. Do you have a moment to chat?',
+            status: 'sent',
+            timestamp: new Date().toISOString()
+          });
+        }
+      } catch (waErr) {
+        console.warn(`⚠ Auto WhatsApp failed for ${lead.name}: ${waErr.message}`);
+      }
+    }
+
+    res.json(lead);
   } catch (e) {
     console.error('Update lead error:', e.message);
     res.status(500).json({ error: e.message });
