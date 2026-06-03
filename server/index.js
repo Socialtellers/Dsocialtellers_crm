@@ -672,25 +672,50 @@ if (WA_PHONE_ID && WA_TOKEN) {
   console.log('⚠ WhatsApp not configured — add WHATSAPP_PHONE_NUMBER_ID + WHATSAPP_ACCESS_TOKEN to .env');
 }
 
-// Send a WhatsApp text message
-async function sendWhatsAppMessage(to, message) {
-  // Normalise number: strip spaces/dashes, ensure + prefix
-  let phone = to.replace(/[\s\-().]/g, '');
+// Normalise phone number
+function normalisePhone(raw) {
+  let phone = raw.replace(/[\s\-().]/g, '');
   if (!phone.startsWith('+')) phone = '+' + phone;
+  return phone;
+}
 
+// Send a WhatsApp text message (free-form — only works after lead has messaged first)
+async function sendWhatsAppMessage(to, message) {
+  const phone = normalisePhone(to);
   const res = await fetch(
     `https://graph.facebook.com/v19.0/${WA_PHONE_ID}/messages`,
     {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${WA_TOKEN}`
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${WA_TOKEN}` },
       body: JSON.stringify({
         messaging_product: 'whatsapp',
         to: phone,
         type: 'text',
         text: { body: message }
+      })
+    }
+  );
+  const data = await res.json();
+  if (!res.ok) throw new Error(JSON.stringify(data.error || data));
+  return data;
+}
+
+// Send WhatsApp template message (for first contact with new numbers)
+async function sendWhatsAppTemplate(to) {
+  const phone = normalisePhone(to);
+  const res = await fetch(
+    `https://graph.facebook.com/v19.0/${WA_PHONE_ID}/messages`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${WA_TOKEN}` },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: phone,
+        type: 'template',
+        template: {
+          name: 'social_tellers_outreach',
+          language: { code: 'en' }
+        }
       })
     }
   );
@@ -711,7 +736,32 @@ app.post('/api/send-whatsapp', async (req, res) => {
   if (!message) return res.status(400).json({ error: 'No message provided' });
 
   try {
-    const result = await sendWhatsAppMessage(to, message);
+    // Check if this lead has had any previous conversation
+    let hasReplied = false;
+    if (supabase && leadId) {
+      const { data: prevMsgs } = await supabase.from('messages')
+        .select('id')
+        .eq('lead_id', leadId)
+        .eq('type', 'whatsapp')
+        .eq('direction', 'inbound')
+        .limit(1);
+      hasReplied = prevMsgs && prevMsgs.length > 0;
+    }
+
+    let result;
+    let sentContent = message;
+
+    if (hasReplied) {
+      // Lead has replied before — send free-form message
+      console.log(`→ Sending free-form WhatsApp to ${to}`);
+      result = await sendWhatsAppMessage(to, message);
+    } else {
+      // New lead — send template first to initiate conversation
+      console.log(`→ Sending template WhatsApp to ${to} (first contact)`);
+      result = await sendWhatsAppTemplate(to);
+      sentContent = 'Hi, just wanted to reach out about your business. Do you have a moment to chat?';
+    }
+
     console.log(`✓ WhatsApp sent: ${result.messages?.[0]?.id}`);
 
     // Log to Supabase
@@ -722,7 +772,7 @@ app.post('/api/send-whatsapp', async (req, res) => {
         type: 'whatsapp',
         direction: 'outbound',
         subject: null,
-        content: message,
+        content: sentContent,
         status: 'sent',
         timestamp: new Date().toISOString()
       });
@@ -733,7 +783,11 @@ app.post('/api/send-whatsapp', async (req, res) => {
       }).eq('id', leadId);
     }
 
-    res.json({ success: true, messageId: result.messages?.[0]?.id });
+    res.json({ 
+      success: true, 
+      messageId: result.messages?.[0]?.id,
+      type: hasReplied ? 'free-form' : 'template'
+    });
   } catch (error) {
     console.error('✗ WhatsApp error:', error.message);
     res.status(500).json({ error: error.message });
