@@ -472,18 +472,24 @@ DETECTED SIGNALS FROM THEIR SITE:
 
     const system = `You are a business intelligence analyst doing a digital marketing audit for a Dubai agency.
 You MUST base every weakness and opportunity on the ACTUAL DATA provided below, not assumptions.
-If a signal says booking is present, do NOT claim they lack booking. Only state what the data supports.
-When you reference a finding, make sure it matches the detected signals.
+
+CRITICAL RULES — breaking these is a serious error:
+- If Instagram field is NOT 'NONE', do NOT say they lack Instagram. They have it.
+- If phone is NOT 'NONE', do NOT say they lack a phone number.
+- If website is NOT 'NONE', do NOT say they have no website.
+- If a detected signal says YES, do NOT list it as a weakness.
+- ONLY list something as a weakness if the data actually confirms it is missing or poor.
+- Do not fabricate findings. Only state what the real data supports.
 Output ONLY valid JSON.`;
 
-    const user = `Analyze this business using the REAL data below.
+    const user = `Analyze this business using the REAL data below. Do not contradict any field below.
 
 Business: ${lead.name}
 Category: ${lead.category}
 Location: ${lead.location}
-Website: ${lead.website || 'NONE'}
-Instagram field: ${lead.instagram || 'NONE'}
-Phone: ${lead.phone || 'NONE'}
+Website: ${lead.website || 'NONE — this is a weakness'}
+Instagram: ${lead.instagram ? lead.instagram + ' — THEY HAVE INSTAGRAM, do NOT list as weakness' : 'NONE — this is a weakness'}
+Phone: ${lead.phone ? lead.phone + ' — THEY HAVE A PHONE NUMBER' : 'NONE — this is a weakness'}
 
 ${siteContext}
 
