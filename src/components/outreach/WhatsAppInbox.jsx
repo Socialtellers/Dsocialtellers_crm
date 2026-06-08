@@ -244,25 +244,32 @@ export default function WhatsAppInbox() {
                 {selectedLead.status}
               </span>
               {/* AI / Manual mode toggle */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                  {selectedLead.ai_mode ? '🤖 AI' : '👤 Manual'}
+              <button
+                onClick={() => toggleAIMode(selectedLead)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  background: selectedLead.ai_mode ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.1)',
+                  border: `1px solid ${selectedLead.ai_mode ? '#7c3aed' : 'rgba(255,255,255,0.2)'}`,
+                  borderRadius: 20, padding: '4px 10px', cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}>
+                <span style={{ fontSize: 12 }}>{selectedLead.ai_mode ? '🤖' : '👤'}</span>
+                <span style={{ fontSize: 11, color: selectedLead.ai_mode ? '#a78bfa' : 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                  {selectedLead.ai_mode ? 'AI' : 'Manual'}
                 </span>
-                <div
-                  onClick={() => toggleAIMode(selectedLead)}
-                  style={{
-                    width: 36, height: 20, borderRadius: 10, cursor: 'pointer',
-                    background: selectedLead.ai_mode ? '#7c3aed' : 'rgba(255,255,255,0.15)',
-                    position: 'relative', transition: 'background 0.2s'
-                  }}>
+                <div style={{
+                  width: 28, height: 16, borderRadius: 8,
+                  background: selectedLead.ai_mode ? '#7c3aed' : 'rgba(255,255,255,0.2)',
+                  position: 'relative', transition: 'background 0.2s', flexShrink: 0
+                }}>
                   <div style={{
-                    width: 14, height: 14, borderRadius: '50%', background: '#fff',
-                    position: 'absolute', top: 3,
-                    left: selectedLead.ai_mode ? 19 : 3,
+                    width: 12, height: 12, borderRadius: '50%', background: '#fff',
+                    position: 'absolute', top: 2,
+                    left: selectedLead.ai_mode ? 14 : 2,
                     transition: 'left 0.2s'
                   }} />
                 </div>
-              </div>
+              </button>
             </div>
           </div>
 
