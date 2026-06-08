@@ -751,8 +751,8 @@ async function sendWhatsAppTemplate(to) {
         to: phone,
         type: 'template',
         template: {
-          name: 'social_tellers_outreach',
-          language: { code: 'en_US' }
+          name: 'social_tellers_intro',
+          language: { code: 'en' }
         }
       })
     }
