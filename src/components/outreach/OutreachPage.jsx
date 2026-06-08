@@ -100,10 +100,19 @@ export default function OutreachPage({ selectedLead, onNavigate }) {
                 padding: '10px 12px', borderRadius: 8, marginBottom: 6, cursor: 'pointer',
                 background: activeLead?.id === lead.id ? 'var(--accent-glow)' : 'var(--bg-card)',
                 border: `1px solid ${activeLead?.id === lead.id ? 'rgba(232,101,30,0.3)' : 'var(--border)'}`,
-                transition: 'all 0.15s'
+                transition: 'all 0.15s', position: 'relative'
               }}
             >
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>{lead.name}</div>
+              <button
+                onClick={e => { e.stopPropagation(); deleteLead(lead.id); }}
+                style={{ position: 'absolute', top: 8, right: 8, background: 'none', border: 'none',
+                  cursor: 'pointer', color: 'var(--text-muted)', padding: 2, borderRadius: 4 }}
+                onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                title="Delete lead">
+                <Trash2 size={11} />
+              </button>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4, paddingRight: 16 }}>{lead.name}</div>
               <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                 {lead.email_body && <span style={{ fontSize: 9, color: '#e8651e', background: 'rgba(232,101,30,0.08)', padding: '2px 6px', borderRadius: 4, fontFamily: 'var(--font-mono)' }}>✉ Email</span>}
                 {lead.whatsapp_message && <span style={{ fontSize: 9, color: '#16a34a', background: 'rgba(16,185,129,0.08)', padding: '2px 6px', borderRadius: 4, fontFamily: 'var(--font-mono)' }}>💬 WhatsApp</span>}
