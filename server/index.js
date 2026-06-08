@@ -1072,17 +1072,18 @@ app.post('/api/send-email', async (req, res) => {
       }
     }
 
-    // Replace Dsocialtellers sign-off with Social Tellers + website
+    // Replace sign-off name and inject website link right after it
     bodyHtml = bodyHtml.replace(/Dsocialtellers/gi, 'Social Tellers');
-    bodyHtml = bodyHtml.replace(/Dsocialteller/gi, 'Social Tellers');
+    bodyHtml = bodyHtml.replace(/Dsocialteller(?!s)/gi, 'Social Tellers');
+    // Add website link right after "Social Tellers" sign-off
+    bodyHtml = bodyHtml.replace(
+      /Social Tellers(<br>|$)/,
+      'Social Tellers<br><a href="https://www.socialtellers.co" target="_blank" style="color:#e8651e;text-decoration:none;font-size:13px;">www.socialtellers.co</a>$1'
+    );
 
     const htmlBody = `
       <div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#333;max-width:560px;">
         ${bodyHtml}
-        <div style="margin-top:16px;font-size:14px;color:#333;">
-          <strong>Social Tellers</strong><br>
-          <a href="https://www.socialtellers.co" target="_blank" style="color:#e8651e;text-decoration:none;">www.socialtellers.co</a>
-        </div>
       </div>`;
 
     const emailRes = await fetch('https://api.resend.com/emails', {
