@@ -752,7 +752,20 @@ async function sendWhatsAppTemplate(to) {
         type: 'template',
         template: {
           name: 'social_tellers_intro',
-          language: { code: 'en' }
+          language: { code: 'en' },
+          components: [
+            {
+              type: 'header',
+              parameters: [
+                {
+                  type: 'image',
+                  image: {
+                    link: 'https://socialtellers.co/wp-content/uploads/2024/01/Social-Tellers-Logo.png'
+                  }
+                }
+              ]
+            }
+          ]
         }
       })
     }
