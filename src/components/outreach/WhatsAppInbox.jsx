@@ -49,6 +49,13 @@ export default function WhatsAppInbox() {
     setTimeout(() => setRefreshing(false), 1000);
   };
 
+  const toggleAIMode = async (lead) => {
+    const newMode = !lead.ai_mode;
+    await db.updateLead(lead.id, { ai_mode: newMode });
+    setSelectedLead({ ...lead, ai_mode: newMode });
+    setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, ai_mode: newMode } : l));
+  };
+
   const sendReply = async () => {
     if (!message.trim() || !selectedLead?.phone) return;
     setSending(true);
@@ -229,13 +236,33 @@ export default function WhatsAppInbox() {
                 <Phone size={9} /> {selectedLead.phone} · {selectedLead.category} · {selectedLead.location}
               </div>
             </div>
-            <div style={{ marginLeft: 'auto' }}>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 10,
                 background: selectedLead.status === 'Replied' ? 'rgba(22,163,74,0.1)' : 'rgba(232,101,30,0.1)',
                 color: selectedLead.status === 'Replied' ? '#16a34a' : 'var(--accent-primary)',
                 fontFamily: 'var(--font-mono)' }}>
                 {selectedLead.status}
               </span>
+              {/* AI / Manual mode toggle */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                  {selectedLead.ai_mode ? '🤖 AI' : '👤 Manual'}
+                </span>
+                <div
+                  onClick={() => toggleAIMode(selectedLead)}
+                  style={{
+                    width: 36, height: 20, borderRadius: 10, cursor: 'pointer',
+                    background: selectedLead.ai_mode ? '#7c3aed' : 'rgba(255,255,255,0.15)',
+                    position: 'relative', transition: 'background 0.2s'
+                  }}>
+                  <div style={{
+                    width: 14, height: 14, borderRadius: '50%', background: '#fff',
+                    position: 'absolute', top: 3,
+                    left: selectedLead.ai_mode ? 19 : 3,
+                    transition: 'left 0.2s'
+                  }} />
+                </div>
+              </div>
             </div>
           </div>
 
