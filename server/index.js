@@ -979,12 +979,16 @@ app.post('/api/whatsapp-webhook', async (req, res) => {
               const isFirstReply = !prevInbound || prevInbound.length <= 1;
 
               if (isFirstReply && matchedLead.whatsapp_message) {
-                // First reply — send the personalized outreach message
+                // First reply — always send personalized outreach regardless of mode
                 autoReply = matchedLead.whatsapp_message;
                 console.log(`  → Sending personalized outreach as first auto-reply`);
-              } else {
-                // Subsequent replies — use Claude to respond naturally
+              } else if (matchedLead.ai_mode === true) {
+                // AI mode enabled — Claude handles subsequent replies
                 autoReply = await generateWhatsAppReply(matchedLead, incomingText);
+                console.log(`  → AI mode: generating reply`);
+              } else {
+                // Manual mode — no auto-reply, team handles it
+                console.log(`  → Manual mode: no auto-reply, waiting for team response`);
               }
 
               if (autoReply) {
