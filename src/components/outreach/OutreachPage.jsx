@@ -11,6 +11,7 @@ export default function OutreachPage({ selectedLead, onNavigate }) {
   const [editingWA, setEditingWA] = useState(false);
   const [emailDraft, setEmailDraft] = useState({});
   const [waDraft, setWaDraft] = useState('');
+  const [sending, setSending] = useState(false);
   const leads = db.getLeads().filter(l => l.email_body || l.whatsapp_message);
   const allMessages = db.getAllMessages();
 
@@ -24,6 +25,8 @@ export default function OutreachPage({ selectedLead, onNavigate }) {
   };
 
   const sendMessage = async (lead, type) => {
+    if (sending) return;
+    setSending(true);
     if (type === 'email') {
       if (!lead.website && !lead.email && !lead.contact_email) {
         // We need an email address — try to use a contact field
@@ -52,6 +55,8 @@ export default function OutreachPage({ selectedLead, onNavigate }) {
         alert(`✓ Email sent to ${recipient}`);
       } catch (e) {
         alert(`✗ Email failed: ${e.message}`);
+      } finally {
+        setSending(false);
       }
       return;
     }
@@ -78,6 +83,8 @@ export default function OutreachPage({ selectedLead, onNavigate }) {
       alert(`✓ WhatsApp sent to ${phone}`);
     } catch (e) {
       alert(`✗ WhatsApp failed: ${e.message}`);
+    } finally {
+      setSending(false);
     }
   };
 
