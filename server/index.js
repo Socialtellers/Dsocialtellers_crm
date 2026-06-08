@@ -1075,6 +1075,9 @@ app.post('/api/send-email', async (req, res) => {
     const htmlBody = `
       <div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#333;max-width:560px;">
         ${bodyHtml}
+        <div style="margin-top:24px;padding-top:16px;border-top:1px solid #eee;font-size:13px;color:#999;">
+          <a href="https://www.socialtellers.co" target="_blank" style="color:#e8651e;text-decoration:none;font-weight:600;">Social Tellers</a> · Creative Marketing Agency · Dubai
+        </div>
       </div>`;
 
     const emailRes = await fetch('https://api.resend.com/emails', {
