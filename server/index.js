@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
-import nodemailer from 'nodemailer';
+// nodemailer replaced by Resend API
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { createClient } from '@supabase/supabase-js';
@@ -1025,38 +1025,33 @@ app.post('/api/whatsapp-webhook', async (req, res) => {
 });
 
 // ════════════════════════════════════════════════════════════════
-// EMAIL SENDING (Gmail via nodemailer)
+// EMAIL SENDING (via Resend API)
 // ════════════════════════════════════════════════════════════════
 
-const GMAIL_USER = process.env.GMAIL_USER;
-const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const FROM_EMAIL = process.env.GMAIL_USER || 'onboarding@resend.dev';
 
-let mailer = null;
-if (GMAIL_USER && GMAIL_APP_PASSWORD) {
-  mailer = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD }
-  });
-  console.log('✓ Gmail configured');
+if (RESEND_API_KEY) {
+  console.log('✓ Resend email configured');
 } else {
-  console.log('⚠ Gmail not configured — email sending disabled');
+  console.log('⚠ Resend not configured — add RESEND_API_KEY to env');
 }
 
 app.post('/api/send-email', async (req, res) => {
   const { to, subject, body, leadId, calendlyLink } = req.body;
   console.log(`\n→ Sending email to ${to}`);
 
-  if (!mailer) return res.status(500).json({ error: 'Gmail not configured. Add GMAIL_USER and GMAIL_APP_PASSWORD to .env' });
+  if (!RESEND_API_KEY) return res.status(500).json({ error: 'Resend not configured. Add RESEND_API_KEY to environment variables.' });
   if (!to) return res.status(400).json({ error: 'No recipient email address' });
 
   try {
-    // Strip any raw calendly URL from the body (we'll show a button instead)
+    // Strip any raw calendly URL from the body
     let cleanBody = body;
     if (calendlyLink) {
       cleanBody = cleanBody.replace(new RegExp(calendlyLink.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '').trim();
     }
 
-    // Build a styled button (no helper text)
+    // Build a styled button
     const bookButton = calendlyLink ? `
       <div style="margin:20px 0;">
         <a href="${calendlyLink}" target="_blank"
@@ -1067,7 +1062,6 @@ app.post('/api/send-email', async (req, res) => {
         </a>
       </div>` : '';
 
-    // Insert the button BEFORE the "Thanks" sign-off if present, else at the end
     let bodyHtml = cleanBody.replace(/\n/g, '<br>');
     if (bookButton) {
       const signoffMatch = bodyHtml.match(/(<br>\s*)?Thanks,/i);
@@ -1083,13 +1077,24 @@ app.post('/api/send-email', async (req, res) => {
         ${bodyHtml}
       </div>`;
 
-    const info = await mailer.sendMail({
-      from: `"Dsocialtellers" <${GMAIL_USER}>`,
-      to,
-      subject: subject || '(no subject)',
-      text: body + (calendlyLink ? `\n\nBook a call: ${calendlyLink}` : ''),
-      html: htmlBody
+    const emailRes = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${RESEND_API_KEY}`
+      },
+      body: JSON.stringify({
+        from: `Social Tellers <${FROM_EMAIL}>`,
+        to: [to],
+        subject: subject || '(no subject)',
+        text: body + (calendlyLink ? `\n\nBook a call: ${calendlyLink}` : ''),
+        html: htmlBody
+      })
     });
+
+    const emailData = await emailRes.json();
+    if (!emailRes.ok) throw new Error(emailData.message || JSON.stringify(emailData));
+    const info = { messageId: emailData.id };
     console.log(`✓ Email sent: ${info.messageId}`);
 
     // Log to Supabase if available
@@ -1181,7 +1186,7 @@ app.get('/api/health', (req, res) => {
     claude: API_KEY ? '✓ configured' : '✗ missing',
     apify: APIFY_KEY ? '✓ configured' : '✗ missing',
     supabase: supabase ? '✓ connected' : '✗ not configured',
-    gmail: mailer ? '✓ configured' : '✗ not configured',
+    email: RESEND_API_KEY ? '✓ Resend configured' : '✗ not configured',
     whatsapp: (WA_PHONE_ID && WA_TOKEN) ? '✓ configured' : '✗ not configured',
     platforms: {
       google_maps: APIFY_KEY ? '✓ real Apify actor' : '✗ requires APIFY_API_KEY',
@@ -1196,6 +1201,6 @@ app.listen(PORT, () => {
   console.log(`   Claude:   ${API_KEY ? '✓' : '✗ missing'}`);
   console.log(`   Apify:    ${APIFY_KEY ? '✓' : '✗ missing'}`);
   console.log(`   Supabase: ${supabase ? '✓ connected' : '✗ not configured'}`);
-  console.log(`   Gmail:    ${mailer ? '✓ configured' : '✗ not configured'}`);
+  console.log(`   Email:    ${RESEND_API_KEY ? '✓ Resend configured' : '✗ not configured'}`);
   console.log(`   Platforms: Google Maps | Instagram | LinkedIn (real Apify actors only)\n`);
 });
