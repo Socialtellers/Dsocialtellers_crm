@@ -164,9 +164,9 @@ HARD RULES:
 - Email: 70-90 words, 3 short paragraphs.
 - WhatsApp: 2-3 sentences only.
 - Subject line: lowercase, specific to their business.
-- End email with: Thanks,\nDsocialtellers
+- End email with: Thanks,\nSocial Tellers
 
-EMAIL FORMAT: "Hi ${cleanName}," then 3 paragraphs, then "Thanks,\nDsocialtellers"
+EMAIL FORMAT: "Hi ${cleanName}," then 3 paragraphs, then "Thanks,\nSocial Tellers"
 ${calendlyLink ? `CALENDLY: Do NOT write the URL. Just say "book a call below" — button is added automatically.` : ''}
 
 WHATSAPP FORMAT: "Hi ${cleanName}!" then 2-3 sentences.
@@ -198,7 +198,7 @@ Make it feel like you actually looked at their business, not a template.
 Output JSON:
 {
   "email_subject": "Proper Title Case Subject about their actual problem (max 8 words, capitalize main words, e.g. No WhatsApp Button on Your Website)",
-  "email_body": "Hi ${cleanName}, then 3 paragraphs 70-90 words, ends with Thanks,\\nDsocialtellers${calendlyLink ? '. No raw URL.' : ''}",
+  "email_body": "Hi ${cleanName}, then 3 paragraphs 70-90 words, ends with Thanks,\\nSocial Tellers${calendlyLink ? '. No raw URL.' : ''}",
   "whatsapp_message": "Hi ${cleanName}! then 2-3 sentences about their specific problem and our solution${calendlyLink ? `, then on its own line: ${calendlyLink}` : ''}"
 }`;
 
