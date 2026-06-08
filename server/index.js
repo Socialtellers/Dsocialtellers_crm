@@ -1072,11 +1072,16 @@ app.post('/api/send-email', async (req, res) => {
       }
     }
 
+    // Replace Dsocialtellers sign-off with Social Tellers + website
+    bodyHtml = bodyHtml.replace(/Dsocialtellers/gi, 'Social Tellers');
+    bodyHtml = bodyHtml.replace(/Dsocialteller/gi, 'Social Tellers');
+
     const htmlBody = `
       <div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#333;max-width:560px;">
         ${bodyHtml}
-        <div style="margin-top:24px;padding-top:16px;border-top:1px solid #eee;font-size:13px;color:#999;">
-          <a href="https://www.socialtellers.co" target="_blank" style="color:#e8651e;text-decoration:none;font-weight:600;">Social Tellers</a> · Creative Marketing Agency · Dubai
+        <div style="margin-top:16px;font-size:14px;color:#333;">
+          <strong>Social Tellers</strong><br>
+          <a href="https://www.socialtellers.co" target="_blank" style="color:#e8651e;text-decoration:none;">www.socialtellers.co</a>
         </div>
       </div>`;
 
