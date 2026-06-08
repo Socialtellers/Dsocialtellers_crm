@@ -760,7 +760,7 @@ async function sendWhatsAppTemplate(to) {
                 {
                   type: 'image',
                   image: {
-                    link: 'https://socialtellers.co/wp-content/uploads/2024/01/Social-Tellers-Logo.png'
+                    link: 'https://cdn.prod.website-files.com/67a5af4ade7b4df8b47cba4d/688318c8f67cea2af26892ca_Logo-Color-Horizontal-p-500.png'
                   }
                 }
               ]
