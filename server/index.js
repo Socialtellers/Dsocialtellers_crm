@@ -1188,6 +1188,127 @@ app.get('*', (req, res) => {
   }
 });
 
+// ─── Follow-up Automation ──────────────────────────────────────────
+// Runs on a schedule — checks for leads that need follow-up
+// Day 2: follow-up if no reply after first WhatsApp
+// Day 5: final follow-up if still no reply
+
+const FOLLOWUP_MESSAGES = [
+  // Day 2 follow-up
+  "Hey, just wanted to check if you got my message. Happy to answer any questions.",
+  // Day 5 final
+  "Last message from me — if the timing isn't right, no worries at all. Feel free to reach out whenever."
+];
+
+async function runFollowUpAutomation() {
+  if (!supabase || !WA_PHONE_ID || !WA_TOKEN) return;
+
+  const now = new Date();
+  const twoDaysAgo = new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString();
+  const fiveDaysAgo = new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString();
+
+  console.log('→ Running follow-up automation check...');
+
+  // Get leads that were Contacted but haven't replied
+  const { data: contactedLeads } = await supabase
+    .from('leads')
+    .select('*')
+    .eq('status', 'Contacted')
+    .eq('channel', 'WhatsApp')
+    .not('phone', 'is', null);
+
+  if (!contactedLeads?.length) {
+    console.log('  No leads need follow-up');
+    return;
+  }
+
+  for (const lead of contactedLeads) {
+    try {
+      // Get outbound messages for this lead
+      const { data: msgs } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('lead_id', lead.id)
+        .eq('type', 'whatsapp')
+        .order('timestamp', { ascending: true });
+
+      if (!msgs?.length) continue;
+
+      const outbound = msgs.filter(m => m.direction === 'outbound');
+      const inbound = msgs.filter(m => m.direction === 'inbound');
+
+      // Skip if they already replied
+      if (inbound.length > 0) continue;
+
+      const lastOutbound = outbound[outbound.length - 1];
+      const lastSentAt = new Date(lastOutbound.timestamp);
+      const daysSinceSent = (now - lastSentAt) / (1000 * 60 * 60 * 24);
+
+      // Determine which follow-up to send
+      let followUpMsg = null;
+      let followUpType = null;
+
+      if (outbound.length === 1 && daysSinceSent >= 2 && daysSinceSent < 5) {
+        // Day 2 follow-up — only sent initial template
+        followUpMsg = FOLLOWUP_MESSAGES[0];
+        followUpType = 'followup_1';
+      } else if (outbound.length === 2 && daysSinceSent >= 5) {
+        // Day 5 final — sent template + first follow-up
+        followUpMsg = FOLLOWUP_MESSAGES[1];
+        followUpType = 'followup_2';
+      } else if (outbound.length >= 3) {
+        // Already sent 2 follow-ups — mark as Not Interested and stop
+        await supabase.from('leads').update({ status: 'Not Interested', last_action: TODAY() }).eq('id', lead.id);
+        console.log(`  ${lead.name} — marked Not Interested after 2 follow-ups with no reply`);
+        continue;
+      }
+
+      if (followUpMsg && lead.phone) {
+        await sendWhatsAppMessage(lead.phone, followUpMsg);
+        await supabase.from('messages').insert({
+          id: `wa_fu_${Date.now()}_${lead.id}`,
+          lead_id: lead.id,
+          type: 'whatsapp',
+          direction: 'outbound',
+          content: followUpMsg,
+          status: 'sent',
+          timestamp: new Date().toISOString()
+        });
+        await supabase.from('leads').update({ last_action: TODAY() }).eq('id', lead.id);
+        console.log(`  ✓ ${followUpType} sent to ${lead.name}`);
+      }
+    } catch (err) {
+      console.warn(`  ⚠ Follow-up failed for ${lead.name}: ${err.message}`);
+    }
+  }
+}
+
+// Run follow-up check every 6 hours
+setInterval(runFollowUpAutomation, 6 * 60 * 60 * 1000);
+// Also run once on startup after 1 minute
+setTimeout(runFollowUpAutomation, 60 * 1000);
+
+// Manual trigger endpoint
+app.post('/api/followup/run', async (req, res) => {
+  try {
+    await runFollowUpAutomation();
+    res.json({ success: true, message: 'Follow-up automation ran' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Agent observability endpoint — see all agent runs, failures, recoveries
+app.get('/api/agent-log', async (req, res) => {
+  if (!supabase) return res.json({ logs: [] });
+  const { data } = await supabase
+    .from('agent_jobs')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(100);
+  res.json({ logs: data || [] });
+});
+
 // ─── Health ────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({
