@@ -1,13 +1,64 @@
 // AI Agent Service - calls our local backend proxy (server/index.js)
-// Backend talks to Claude API and Apify — avoids CORS issues
 const BACKEND = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? '' : 'http://localhost:3001');
 
-// Model tiers — use cheap Haiku for simple agents, Sonnet for quality-critical ones
 const MODELS = {
-  cheap: 'claude-haiku-4-5-20251001',   // ~10x cheaper, for simple/structured tasks
-  smart: 'claude-sonnet-4-5'            // for research + copywriting
+  cheap: 'claude-haiku-4-5-20251001',
+  smart: 'claude-sonnet-4-5'
 };
 
+// ─── Agent Observability Log ────────────────────────────────────────
+// Every agent run is tracked — success, failure, duration, rejection reason
+const agentLog = [];
+
+export function getAgentLog() { return [...agentLog]; }
+export function clearAgentLog() { agentLog.length = 0; }
+
+function logAgentRun(agentName, leadId, status, durationMs, meta = {}) {
+  agentLog.push({
+    id: `log_${Date.now()}`,
+    agent: agentName,
+    leadId,
+    status,           // 'success' | 'failed' | 'rejected' | 'recovered'
+    durationMs,
+    timestamp: new Date().toISOString(),
+    ...meta
+  });
+}
+
+// ─── Assertion Layer ────────────────────────────────────────────────
+// Each agent output is validated before passing to the next agent
+// If it fails the assertion, we attempt a recovery prompt before giving up
+
+function assertResearch(data) {
+  if (!data || typeof data !== 'object') throw new Error('Research returned non-object');
+  if (!data.business_summary || data.business_summary.length < 20) throw new Error('business_summary too short or missing');
+  if (!Array.isArray(data.marketing_weaknesses) || data.marketing_weaknesses.length === 0) throw new Error('marketing_weaknesses empty');
+  if (!['high', 'medium', 'low'].includes(data.brand_quality)) throw new Error(`brand_quality invalid: ${data.brand_quality}`);
+  return true;
+}
+
+function assertStrategy(data) {
+  if (!data || typeof data !== 'object') throw new Error('Strategy returned non-object');
+  if (!data.hook || data.hook.length < 10) throw new Error('hook too short or missing');
+  if (!data.pain_point_focus || data.pain_point_focus.length < 10) throw new Error('pain_point_focus missing');
+  if (!data.offer_positioning || data.offer_positioning.length < 10) throw new Error('offer_positioning missing');
+  return true;
+}
+
+function assertCopy(data) {
+  if (!data || typeof data !== 'object') throw new Error('Copy returned non-object');
+  if (!data.email_subject || data.email_subject.length < 5) throw new Error('email_subject missing');
+  if (!data.email_body || data.email_body.length < 50) throw new Error('email_body too short');
+  if (!data.whatsapp_message || data.whatsapp_message.length < 20) throw new Error('whatsapp_message too short');
+  // Check for AI hallmarks that sneak through
+  const bannedPhrases = ['em-dash', 'leverage', 'synergy', 'unlock potential', 'game-changing', 'digital landscape'];
+  for (const phrase of bannedPhrases) {
+    if (data.email_body.toLowerCase().includes(phrase)) throw new Error(`Banned phrase found: "${phrase}"`);
+  }
+  return true;
+}
+
+// ─── Claude caller ──────────────────────────────────────────────────
 async function callClaude(systemPrompt, userMessage, maxTokens = 1000, model = MODELS.smart) {
   const response = await fetch(`${BACKEND}/api/claude`, {
     method: 'POST',
@@ -31,11 +82,16 @@ async function parseJSON(text) {
 }
 
 // ─── AGENT 1: Data Validation (NO AI — free + instant) ─────────────
-// Validation is a simple rule check, so we do it in code. No token cost.
 export async function runValidationAgent(rawLead) {
+  const start = Date.now();
   const hasContact = !!(rawLead.website || rawLead.instagram || rawLead.phone);
   const hasName = !!(rawLead.name && rawLead.name.trim().length > 1);
   const valid = hasContact && hasName;
+
+  logAgentRun('validation', rawLead.id, valid ? 'success' : 'rejected', Date.now() - start, {
+    reason: valid ? 'Has name and contact' : 'Missing name or contact'
+  });
+
   return {
     valid,
     reason: valid ? 'Has name and at least one contact method' : 'Missing name or all contact methods',
@@ -49,32 +105,61 @@ export async function runValidationAgent(rawLead) {
   };
 }
 
-// ─── AGENT 2: Business Research (REAL — fetches their website) ─────
+// ─── AGENT 2: Business Research ────────────────────────────────────
 export async function runResearchAgent(lead) {
-  // Calls the backend which fetches the actual website and analyzes real content
-  const response = await fetch(`${BACKEND}/api/research`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(lead)
-  });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(`Research failed: ${err.error || response.status}`);
+  const start = Date.now();
+  try {
+    const response = await fetch(`${BACKEND}/api/research`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(lead)
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(`Research failed: ${err.error || response.status}`);
+    }
+    const data = await response.json();
+
+    // ── Assertion ──
+    try {
+      assertResearch(data);
+      logAgentRun('research', lead.id, 'success', Date.now() - start, { source: data.data_source });
+      return data;
+    } catch (assertErr) {
+      // ── Recovery: retry with stricter prompt ──
+      logAgentRun('research', lead.id, 'rejected', Date.now() - start, { assertionFail: assertErr.message });
+      console.warn(`Research assertion failed for ${lead.name}: ${assertErr.message} — retrying`);
+
+      const retryRes = await fetch(`${BACKEND}/api/research`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...lead, _retry: true })
+      });
+      const retryData = await retryRes.json();
+      assertResearch(retryData); // if this fails too, throw and pipeline stops
+
+      logAgentRun('research', lead.id, 'recovered', Date.now() - start, { recoveredAfter: assertErr.message });
+      return retryData;
+    }
+  } catch (err) {
+    logAgentRun('research', lead.id, 'failed', Date.now() - start, { error: err.message });
+    throw err;
   }
-  return response.json();
 }
 
 // ─── AGENT 3: Personalization Strategy ─────────────────────────────
 export async function runStrategyAgent(lead, research) {
-  const SERVICES = `Dsocialtellers services:
+  const start = Date.now();
+
+  const SERVICES = `Services offered:
 - Digital Marketing (social media management, ads, content strategy)
 - Creator Collaborations (influencer partnerships, UGC campaigns)
 - Video Production (reels, brand films, product videos)
 - Photography (product, lifestyle, brand photography)
 - Personal Branding (positioning, content, profile building for founders/executives)`;
 
-  const system = `You are a B2B sales strategist for Dsocialtellers, a Dubai marketing agency.
-You match the business's weakness to ONE specific Dsocialtellers service that solves it.
+  const system = `You are a B2B sales strategist for a marketing agency.
+Match the business's weakness to ONE specific service that solves it.
 Output ONLY valid JSON.`;
 
   const user = `Create an outreach strategy for this lead:
@@ -87,23 +172,34 @@ Tone: ${research.tone}
 
 ${SERVICES}
 
-Pick ONLY ONE service from the list above that best solves their main weakness.
-Do NOT suggest services outside this list.
-
-Output JSON:
+Pick ONLY ONE service. Output JSON:
 {
-  "hook": "specific opening angle based on what you actually found about their business",
-  "pain_point_focus": "the ONE main problem that a Dsocialtellers service can solve",
-  "offer_positioning": "which ONE Dsocialtellers service to offer and exactly why it fits this business"
+  "hook": "specific opening angle based on actual research",
+  "pain_point_focus": "the ONE main problem",
+  "offer_positioning": "which ONE service and exactly why it fits"
 }`;
 
-  const result = await callClaude(system, user, 500, MODELS.cheap);
-  return parseJSON(result);
+  try {
+    const result = await callClaude(system, user, 500, MODELS.cheap);
+    const data = await parseJSON(result);
+    assertStrategy(data);
+    logAgentRun('strategy', lead.id, 'success', Date.now() - start);
+    return data;
+  } catch (err) {
+    // Recovery — retry with more explicit instructions
+    logAgentRun('strategy', lead.id, 'rejected', Date.now() - start, { error: err.message });
+    const retryResult = await callClaude(system, user + '\n\nIMPORTANT: You MUST return valid JSON with hook, pain_point_focus, and offer_positioning fields. No markdown.', 600, MODELS.cheap);
+    const retryData = await parseJSON(retryResult);
+    assertStrategy(retryData);
+    logAgentRun('strategy', lead.id, 'recovered', Date.now() - start);
+    return retryData;
+  }
 }
 
 // ─── AGENT 4: Copywriting ──────────────────────────────────────────
 export async function runCopywritingAgent(lead, research, strategy, calendlyLink = '') {
-  // Clean the business name for greetings — strip taglines + trailing UAE area names
+  const start = Date.now();
+
   const UAE_AREAS = ['Bur Dubai','Al Mankhool','Al Quoz','Al Barsha','Business Bay','Downtown Dubai','Dubai Marina','JLT','Jumeirah Lakes Towers','Deira','Karama','Satwa','Jumeirah','Palm Jumeirah','Dubai Hills','Mirdif','Silicon Oasis','Tecom','Media City','Internet City','Sheikh Zayed Road','Al Nahda','International City','Motor City','Sports City','Arabian Ranches','Discovery Gardens','Dubai','Abu Dhabi','Sharjah','Ajman','UAE','United Arab Emirates'];
   let cleanName = (lead.name || '').split(/\s*[|\-–—:•]\s*/)[0].trim();
   for (const area of [...UAE_AREAS].sort((a, b) => b.length - a.length)) {
@@ -112,120 +208,69 @@ export async function runCopywritingAgent(lead, research, strategy, calendlyLink
   }
   if (!cleanName || cleanName.length < 2) cleanName = lead.name;
 
-  const DSOCIALTELLERS_SERVICES = `
-Dsocialtellers offers ONLY these 5 services — never suggest anything else:
-1. Digital Marketing — social media management, paid ads, content strategy, growing their online presence
-2. Creator Collaborations — connecting them with local influencers and UGC creators to reach new audiences
-3. Video Production — reels, brand films, product videos, short-form content for social media
-4. Photography — product shoots, lifestyle photography, brand imagery for their website and social
-5. Personal Branding — building the founder or executive's personal profile, content, and positioning online`;
+  const system = `You are a real person at a marketing agency reaching out to a local business you noticed online.
 
-  const system = `You are Ahmed, someone who works at Dsocialtellers, a small marketing agency in Dubai. You noticed something specific about a local business and you are reaching out personally.
-
-You are NOT pitching. You are NOT an AI. You noticed a real problem and you are offering the ONE service that directly solves it.
-
-MESSAGE STRUCTURE — follow this exactly:
-Paragraph 1: What you noticed about their business (specific, real, based on actual research)
-Paragraph 2: Why this is hurting them (the consequence of the problem)
-Paragraph 3: Which ONE Dsocialtellers service fixes it and how (be specific about what we do)
-
-VOICE: Casual, direct, human. Like a WhatsApp from someone in marketing who genuinely spotted something.
-
-EXAMPLE — Photography service for a restaurant with bad photos:
-"Hi Saffron Kitchen,
-
-I checked out your Instagram and the food looks great in person I'm sure, but the photos are quite dark and don't really show the dishes off properly.
-
-That's usually what stops people from saving the post or coming in. Good food photography makes people hungry just by scrolling.
-
-We do brand photography for restaurants in Dubai. Happy to show you what a difference it makes — book a call below if you're interested.
-
-Thanks,
-Dsocialtellers"
-
-EXAMPLE — Digital Marketing for a gym with no social media presence:
-"Hi FitZone,
-
-Noticed your gym has been open for a while but your Instagram hasn't been updated in 4 months and you've only got 200 followers.
-
-In Dubai, most people find gyms through social media before they ever Google you. That gap is costing you walk-ins.
-
-We manage social media for fitness businesses here, posting consistently and running local ads to bring in new members. Worth a quick call if you want to see how it works.
-
-Thanks,
-Dsocialtellers"
+MESSAGE STRUCTURE:
+Para 1: Specific thing you noticed (real, based on research data)
+Para 2: Why this is hurting them
+Para 3: The ONE service that fixes it
 
 HARD RULES:
-- NO em-dashes (—). Use comma or full stop instead.
-- NO "we've worked with X before", "businesses like yours", "clients like you".
-- NO "leaving money on the table", "leverage", "unlock", "elevate", "boost", "cutting-edge", "drive growth", "digital landscape", "in today's world", "game-changing".
-- NEVER suggest SEO, website redesign, e-commerce, app development, or anything NOT in Dsocialtellers' 5 services.
-- ONLY promote the ONE service that matches their specific problem.
-- Email: 70-90 words, 3 short paragraphs.
-- WhatsApp: 2-3 sentences only.
-- Subject line: lowercase, specific to their business.
-- End email with: Thanks,\nSocial Tellers
-
-EMAIL FORMAT: "Hi ${cleanName}," then 3 paragraphs, then "Thanks,\nSocial Tellers"
-${calendlyLink ? `CALENDLY: Do NOT write the URL. Just say "book a call below" — button is added automatically.` : ''}
-
-WHATSAPP FORMAT: "Hi ${cleanName}!" then 2-3 sentences.
-${calendlyLink ? `Last line of WhatsApp is ONLY the booking link: ${calendlyLink}` : `End with something like "worth a quick chat?"`}
+- NO em-dashes. Use comma or full stop.
+- NO "leaving money on the table", "leverage", "unlock", "elevate", "boost", "cutting-edge", "game-changing", "digital landscape"
+- ONE service only. Never list multiple.
+- Email: 70-90 words, 3 paragraphs
+- WhatsApp: 2-3 sentences max
+- Subject: Title Case, specific to this business
+- Sign off: Thanks,\\nSocial Tellers
+${calendlyLink ? `- Do NOT write the calendly URL in email body. Just say "book a call below"` : ''}
 
 Output ONLY valid JSON.`;
 
-  const user = `Write outreach for this business based on what was actually found about them.
-
-Business: ${cleanName}
-Type: ${lead.category}
-Location: ${lead.location}
-
-WHAT WAS FOUND (use this as the basis — do not make things up):
-Main problem observed: ${research.marketing_weaknesses?.[0] || 'weak online presence'}
+  const user = `Business: ${cleanName} (${lead.category}, ${lead.location})
+Main problem: ${research.marketing_weaknesses?.[0] || 'weak online presence'}
 Other issues: ${research.marketing_weaknesses?.slice(1).join(', ') || 'none'}
-Opportunities spotted: ${research.growth_opportunities?.join(', ') || 'none'}
-Brand quality: ${research.brand_quality || 'unknown'}
-
-STRATEGY:
+Opportunities: ${research.growth_opportunities?.join(', ') || 'none'}
 Angle: ${strategy.hook}
 Service to offer: ${strategy.offer_positioning}
 
-${DSOCIALTELLERS_SERVICES}
+Which Dsocialtellers service to offer: ${strategy.offer_positioning}
 
-Write the message addressing their SPECIFIC problem first, then offer the ONE matching service as the solution.
-Make it feel like you actually looked at their business, not a template.
+STRICT: Only mention this ONE service.
 
 Output JSON:
 {
-  "email_subject": "Proper Title Case Subject about their actual problem (max 8 words, capitalize main words, e.g. No WhatsApp Button on Your Website)",
-  "email_body": "Hi ${cleanName}, then 3 paragraphs 70-90 words, ends with Thanks,\\nSocial Tellers${calendlyLink ? '. No raw URL.' : ''}",
-  "whatsapp_message": "Hi ${cleanName}! then 2-3 sentences about their specific problem and our solution${calendlyLink ? `, then on its own line: ${calendlyLink}` : ''}"
+  "email_subject": "Title Case Subject (max 8 words)",
+  "email_body": "Hi ${cleanName}, 3 paragraphs 70-90 words, ends with Thanks,\\nSocial Tellers${calendlyLink ? '. No raw URL.' : ''}",
+  "whatsapp_message": "Hi ${cleanName}! 2-3 sentences${calendlyLink ? `, then on its own line: ${calendlyLink}` : ''}"
 }`;
 
-  const result = await callClaude(system, user, 600, MODELS.smart);
-  return parseJSON(result);
+  try {
+    const result = await callClaude(system, user, 600, MODELS.smart);
+    const data = await parseJSON(result);
+    assertCopy(data);
+    logAgentRun('copywriting', lead.id, 'success', Date.now() - start);
+    return data;
+  } catch (err) {
+    // Recovery — retry with stronger constraints
+    logAgentRun('copywriting', lead.id, 'rejected', Date.now() - start, { error: err.message });
+    const retryResult = await callClaude(system + '\n\nPREVIOUS ATTEMPT FAILED QUALITY CHECK. Write a new version. Be more specific and human.', user, 700, MODELS.smart);
+    const retryData = await parseJSON(retryResult);
+    assertCopy(retryData);
+    logAgentRun('copywriting', lead.id, 'recovered', Date.now() - start);
+    return retryData;
+  }
 }
 
-// ─── AGENT 5: CRM Update ───────────────────────────────────────────
-// ─── AGENT 5: CRM Update (NO AI — free + instant) ──────────────────
-// Setting a status + timestamp needs no intelligence. Pure code, zero cost.
+// ─── AGENT 5: CRM Update (NO AI) ───────────────────────────────────
 export async function runCRMAgent(lead, action, notes = '') {
   const statusMap = {
-    'contacted': 'Contacted',
-    'replied': 'Replied',
-    'interested': 'Interested',
-    'not interested': 'Not Interested',
-    'follow up': 'Follow-up',
-    'closed won': 'Closed Won',
-    'closed lost': 'Closed Lost'
+    'contacted': 'Contacted', 'replied': 'Replied', 'interested': 'Interested',
+    'not interested': 'Not Interested', 'follow up': 'Follow-up',
+    'closed won': 'Closed Won', 'closed lost': 'Closed Lost'
   };
   const status = statusMap[action?.toLowerCase()] || lead.status || 'New';
-  return {
-    status,
-    notes: notes || lead.notes || '',
-    last_action: new Date().toISOString().split('T')[0],
-    tags: lead.tags || []
-  };
+  return { status, notes: notes || lead.notes || '', last_action: new Date().toISOString().split('T')[0], tags: lead.tags || [] };
 }
 
 // ─── FULL PIPELINE ─────────────────────────────────────────────────
@@ -241,7 +286,6 @@ export async function runFullPipeline(lead, onProgress, calendlyLink = '') {
   const research = await runResearchAgent(lead);
   onProgress?.({ step: 'Research complete ✓', pct: 40, statusUpdate: 'Researched' });
 
-  // Wait for Researched status to be saved before continuing
   await new Promise(r => setTimeout(r, 1500));
 
   onProgress?.({ step: 'Building outreach strategy...', pct: 45 });
