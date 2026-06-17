@@ -1,39 +1,40 @@
 :root {
-  /* Backgrounds — warm cream, Social Tellers brand */
-  --bg-base: #faf3da;
-  --bg-surface: #fffdf4;
-  --bg-card: #ffffff;
-  --bg-hover: #fbf0d8;
-  --bg-input: #fffdf4;
+  /* Backgrounds — clean dark slate, professional SaaS */
+  --bg-base:    #0f1117;
+  --bg-surface: #161b27;
+  --bg-card:    #1e2536;
+  --bg-hover:   #252d3d;
+  --bg-input:   #1a2030;
 
   /* Borders */
-  --border: #ecdfc0;
-  --border-bright: #e0cda0;
+  --border:        rgba(255,255,255,0.07);
+  --border-bright: rgba(255,255,255,0.12);
 
-  /* Accent — vibrant orange */
-  --accent-primary: #e8651e;
-  --accent-glow: rgba(232, 101, 30, 0.12);
-  --accent-secondary: #c0410f;
-  --accent-green: #16a34a;
-  --accent-amber: #f59e0b;
-  --accent-red: #dc2626;
+  /* Accent — electric indigo/blue */
+  --accent-primary:   #6366f1;
+  --accent-secondary: #4f46e5;
+  --accent-glow:      rgba(99,102,241,0.12);
+  --accent-green:     #22c55e;
+  --accent-amber:     #f59e0b;
+  --accent-red:       #ef4444;
 
-  /* Text — deep maroon-brown */
-  --text-primary: #5c1f0a;
-  --text-secondary: #9a6b4f;
-  --text-muted: #b89473;
-  --text-accent: #e8651e;
+  /* Text */
+  --text-primary:   #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted:     #64748b;
+  --text-accent:    #818cf8;
 
   /* Typography */
   --font-display: 'Inter', -apple-system, sans-serif;
-  --font-body: 'Inter', -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+  --font-body:    'Inter', -apple-system, sans-serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', monospace;
 
-  --radius: 8px;
+  --radius:    8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
-  --shadow-card: 0 1px 3px rgba(92,31,10,0.06), 0 8px 24px rgba(92,31,10,0.06);
-  --shadow-glow: 0 0 0 1px rgba(232,101,30,0.12), 0 8px 32px rgba(232,101,30,0.1);
+
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.2);
+  --shadow-glow: 0 0 0 1px rgba(99,102,241,0.2), 0 8px 32px rgba(99,102,241,0.15);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -49,37 +50,37 @@ html, body, #root {
 
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: var(--bg-base); }
-::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
 
 button { cursor: pointer; font-family: var(--font-body); }
 input, textarea, select { font-family: var(--font-body); }
 a { text-decoration: none; color: inherit; }
 
 .glass {
-  background: rgba(13, 19, 32, 0.8);
+  background: rgba(30, 37, 54, 0.8);
   backdrop-filter: blur(16px);
   border: 1px solid var(--border);
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 10px rgba(232,101,30,0.2); }
-  50% { box-shadow: 0 0 25px rgba(232,101,30,0.5); }
+  0%, 100% { box-shadow: 0 0 10px rgba(99,102,241,0.2); }
+  50%       { box-shadow: 0 0 25px rgba(99,102,241,0.5); }
 }
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes slideIn {
   from { opacity: 0; transform: translateX(-12px); }
-  to { opacity: 1; transform: translateX(0); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
 }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
 
-.animate-fadeIn { animation: fadeIn 0.3s ease forwards; }
+.animate-fadeIn  { animation: fadeIn  0.3s ease forwards; }
 .animate-slideIn { animation: slideIn 0.3s ease forwards; }
-.spinner { animation: spin 0.8s linear infinite; }
+.spinner         { animation: spin 0.8s linear infinite; }
