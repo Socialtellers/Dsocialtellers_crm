@@ -10,7 +10,7 @@ export const CRM_STATUSES = [
 
 export const STATUS_COLORS = {
   'New': '#e8651e',
-  'Researched': '#7c3aed',
+  'Researched': '#8b5cf6',
   'Contacted': '#c0410f',
   'Replied': '#d97706',
   'Interested': '#16a34a',
