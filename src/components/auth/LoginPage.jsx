@@ -39,9 +39,9 @@ export default function LoginPage({ onLogin }) {
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
           <div style={{
-            width: 56, height: 56, borderRadius: 14, background: 'var(--accent-primary)',
+            width: 56, height: 56, borderRadius: 14, background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 16px', boxShadow: '0 8px 24px rgba(232,101,30,0.3)'
+            margin: '0 auto 16px', boxShadow: '0 8px 24px rgba(99,102,241,0.3)'
           }}>
             <span style={{ fontSize: 24 }}>⚡</span>
           </div>
@@ -99,7 +99,7 @@ export default function LoginPage({ onLogin }) {
                 background: loading ? 'var(--border)' : 'var(--accent-primary)',
                 border: 'none', borderRadius: 8, color: '#fff', fontSize: 14, fontWeight: 600,
                 cursor: loading ? 'not-allowed' : 'pointer',
-                boxShadow: loading ? 'none' : '0 4px 12px rgba(232,101,30,0.3)' }}>
+                boxShadow: loading ? 'none' : '0 4px 12px rgba(99,102,241,0.3)' }}>
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
